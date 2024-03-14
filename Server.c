@@ -6,47 +6,69 @@
 #include <sys/socket.h> 
 #include <sys/types.h> 
 #include <unistd.h> // read(), write(), close()
+#include <pthread.h> // Para utilizar hilos (threads)
+
 #define MAX 80 
-#define PORT 8080 
+#define CONFIG_FILE "config.txt" // Nombre del archivo de configuración
 #define SA struct sockaddr 
 
-// Function designed for chat between client and server. 
-void func(int connfd) 
+// Función diseñada para el chat entre cliente y servidor. 
+void *func(void *arg) 
 { 
+    int connfd = *((int*)arg);
 	char buff[MAX]; 
 	int n; 
-	// infinite loop for chat 
+	// Bucle infinito para el chat 
 	for (;;) { 
 		bzero(buff, MAX); 
 
-		// read the message from client and copy it in buffer 
+		// Leer el mensaje del cliente y copiarlo en el buffer 
 		read(connfd, buff, sizeof(buff)); 
-		// print buffer which contains the client contents 
+		// Imprimir el buffer que contiene el contenido del cliente 
 		printf("From client: %s\t To client : ", buff); 
 		bzero(buff, MAX); 
 		n = 0; 
-		// copy server message in the buffer 
+		// Copiar el mensaje del servidor en el buffer 
 		while ((buff[n++] = getchar()) != '\n') 
 			; 
 
-		// and send that buffer to client 
+		// y enviar ese buffer al cliente 
 		write(connfd, buff, sizeof(buff)); 
 
-		// if msg contains "Exit" then server exit and chat ended. 
+		// Si el mensaje contiene "Exit" entonces el servidor sale y el chat termina. 
 		if (strncmp("exit", buff, 4) == 0) { 
 			printf("Server Exit...\n"); 
 			break; 
 		} 
 	} 
+	close(connfd); // Cerrar la conexión con este cliente
+	return NULL;
 } 
 
-// Driver function 
+// Función principal 
 int main() 
 { 
 	int sockfd, connfd, len; 
 	struct sockaddr_in servaddr, cli; 
 
-	// socket create and verification 
+	// Leer IP y puerto desde el archivo de configuración
+    FILE *config_file = fopen(CONFIG_FILE, "r");
+    if (config_file == NULL)
+    {
+        perror("Error opening config file");
+        exit(EXIT_FAILURE);
+    }
+
+    char ip[MAX];
+    int port;
+    if (fscanf(config_file, "%s%d", ip, &port) != 2)
+    {
+        perror("Error reading config file");
+        exit(EXIT_FAILURE);
+    }
+    fclose(config_file);
+
+	// Crear el socket
 	sockfd = socket(AF_INET, SOCK_STREAM, 0); 
 	if (sockfd == -1) { 
 		printf("socket creation failed...\n"); 
@@ -56,12 +78,12 @@ int main()
 		printf("Socket successfully created..\n"); 
 	bzero(&servaddr, sizeof(servaddr)); 
 
-	// assign IP, PORT 
+	// Asignar IP y PORT
 	servaddr.sin_family = AF_INET; 
-	servaddr.sin_addr.s_addr = htonl(INADDR_ANY); 
-	servaddr.sin_port = htons(PORT); 
+	servaddr.sin_addr.s_addr = inet_addr(ip); 
+	servaddr.sin_port = htons(port); 
 
-	// Binding newly created socket to given IP and verification 
+	// Enlazar el socket al IP y PORT
 	if ((bind(sockfd, (SA*)&servaddr, sizeof(servaddr))) != 0) { 
 		printf("socket bind failed...\n"); 
 		exit(0); 
@@ -69,27 +91,31 @@ int main()
 	else
 		printf("Socket successfully binded..\n"); 
 
-	// Now server is ready to listen and verification 
+	// Escuchar las conexiones entrantes
 	if ((listen(sockfd, 5)) != 0) { 
 		printf("Listen failed...\n"); 
 		exit(0); 
 	} 
 	else
 		printf("Server listening..\n"); 
+
 	len = sizeof(cli); 
 
-	// Accept the data packet from client and verification 
-	connfd = accept(sockfd, (SA*)&cli, &len); 
-	if (connfd < 0) { 
-		printf("server accept failed...\n"); 
-		exit(0); 
-	} 
-	else
-		printf("server accept the client...\n"); 
+	// Bucle para aceptar conexiones entrantes
+	while (1) {
+		// Aceptar el paquete de datos del cliente
+		connfd = accept(sockfd, (SA*)&cli, &len); 
+		if (connfd < 0) { 
+			printf("server accept failed...\n"); 
+			exit(0); 
+		} 
+		else
+			printf("server accept the client...\n"); 
+		
+		pthread_t tid; // Identificador del hilo
+		pthread_create(&tid, NULL, func, &connfd); // Crear un hilo para manejar esta conexión
+	}
 
-	// Function for chatting between client and server 
-	func(connfd); 
-
-	// After chatting close the socket 
-	close(sockfd); 
+	close(sockfd); // Cerrar el socket principal
+	return 0;
 }
