@@ -1,3 +1,7 @@
+# About this file
+
+This file makes some considerations about the implementation of the MQTT Protocol, especially about the Control Packets. It is also important to consult the [official documentation](http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.pdf).
+
 # 3. MQTT Control Packets
 
 ## 3.1. CONNECT
@@ -40,5 +44,26 @@ The presence of the payload is determined by the flags in the [Variable header](
 - If the ClientId represents a Client already connected, the Server **SHOULD** disconnect the existing Client.
 
 ## 3.3. PUBLISH
+
+### 3.3.2. Variable header
+The variable header contains the following fields in the order:
+1. Topic Name (UTF-8)
+2. Packet Identifier (Present if the QoS level is 1 or 2)
+
+### 3.3.3. Payload
+Contains the Application Message that is being published. It is valid for a PUBLISH Packet to contain a zero length payload.
+
+### 3.3.4. Response
+The receiver of a PUBLISH Packet **MUST** respond according to the QoS in the Packet.
+| QoS | Expected Response |
+| :-: | :---------------: |
+| 0   | None              |
+| 1   | PUBACK            |
+| 2   | PUBREC            |
+
+### 3.3.5. Actions
+The Server uses a PUBLISH Packet to send an Application Message to each Client which has a matching subscription.
+
+The Server **MUST** deliver the message to the Client respecting the maximum QoS of all the matching subscriptions.
 
 ## 3.14. DISCONNECT
