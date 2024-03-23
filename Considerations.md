@@ -2,6 +2,69 @@
 
 This file makes some considerations about the implementation of the MQTT Protocol, especially about the Control Packets. It is also important to consult the [official documentation](http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.pdf).
 
+# 2. MQTT Control Packet format
+
+## 2.1. Structure of an MQTT Control Packet
+
+|                        Structure                        |
+:---------------------------------------------------------:
+|Fixed header, **present in all MQTT Control Packets**    |
+|Variable header, **present in some MQTT Control Packets**|
+|Payload header, **present in some MQTT Control Packets** |
+
+## 2.2. Fixed header
+
+![](img/Fixed_header.png)
+
+### 2.2.1. MQTT Control Packet type
+**Position:** byte 1, bits 7 - 4.
+
+| Name | Value | Direction of flow |
+| :--: | :---: | :---------------: |
+| [CONNECT](#31-connect) | 1 | Client to Server |
+| [PUBLISH](#33-publish) | 3 | Client to Server or Server to Client |
+| [DISCONNECT](#314-disconnect) | 14 | Client to Server |
+
+### 2.2.2. Flags
+**Position:** byte 1, bits 3 - 0.
+
+| Name | Fixed header flags |
+| :--: | :----------------: |
+| [CONNECT](#31-connect) | Reserved |
+| [PUBLISH](#33-publish) | Used in MQTT 3.1.1 |
+| [DISCONNECT](#314-disconnect) | Reserved |
+
+### 2.2.3. Remaining Length
+**Position:** starts at byte 2.
+
+Number of bytes remaining within the current packet, including data in the variable header and the payload.
+
+## 2.3. Variable header
+
+The content of the variable header varies depending on the Packet type. The Pakect Identifier field of variable header is common in several packet types.
+
+### 2.3.1. Packet Identifier
+
+The variable header component of many of the Control Packet types includes a 2 byte Packet Identifier field.
+
+| Control Packet | Packet Identifier field |
+| :------------: | :---------------------: |
+| CONNECT | NO |
+| PUBLISH | YES (QoS > 0) |
+| DISCONNECT | NO |
+
+The Client and Server assign Packet Identifiers independently of each other.
+
+## 2.4. Payload
+
+Some MQTT Control Packets contain a payload as the final part of the packet.
+
+| Control Packet | Payload |
+| :------------: | :-----: |
+| CONNECT | Required |
+| PUBLISH | Optional |
+| DISCONNECT | None |
+
 # 3. MQTT Control Packets
 
 ## 3.1. CONNECT
@@ -67,3 +130,27 @@ The Server uses a PUBLISH Packet to send an Application Message to each Client w
 The Server **MUST** deliver the message to the Client respecting the maximum QoS of all the matching subscriptions.
 
 ## 3.14. DISCONNECT
+
+This is the final Control Packet sent from the Client to the Server. It indicates that the Client is disconnecting cleanly.
+
+### 3.14.1. Fixed header
+
+The Server **MUST** validate that reserved bits are set to zero, if not, it will disconnect the Client.
+
+### 3.14.2. Variable header
+
+No variable header.
+
+### 3.14.3. payload
+
+No payload.
+
+### 3.14.4 Response
+
+Client:
+- **MUST** close the Network Connection
+- **MUST NOT** send any more Control Packets
+
+Server:
+- **MUST** discard any Will Message associated with the current connection without publishing it
+- **SHOULD** close the Network Connections if the Client has not already done so
