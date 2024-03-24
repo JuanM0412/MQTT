@@ -3,10 +3,13 @@
 #include <string.h>
 #include <sys/types.h>
 
+<<<<<<< HEAD
 #define MQTT_FIXED_HEADER_PUBLISH 0x30
 #define MAX_TOPIC_LENGTH 256  // Tamaño máximo del tema
 #define MAX_MESSAGE_LENGTH 1024  // Tamaño máximo del mensaje
 
+=======
+>>>>>>> bc90712 (Packets creation (prototype))
 MQTT_Packet create_connect_packet(u_int16_t keep_alive, const char* client_id) {
     // Calcular la longitud del cliente ID
     size_t client_id_length = strlen(client_id);
@@ -53,6 +56,7 @@ MQTT_Packet create_connect_packet(u_int16_t keep_alive, const char* client_id) {
 }
 
 MQTT_Packet create_publish_packet(const char* topic, const char* message) {
+<<<<<<< HEAD
     size_t topic_length = strlen(topic);
     size_t message_length = strlen(message);
 
@@ -62,6 +66,14 @@ MQTT_Packet create_publish_packet(const char* topic, const char* message) {
 
     // Calcular la longitud total del paquete PUBLISH
     size_t packet_length = 2 + topic_length + message_length; // 2 bytes para el Length del encabezado variable
+=======
+    // Calcular la longitud del tema y del mensaje
+    size_t topic_length = strlen(topic);
+    size_t message_length = strlen(message);
+
+    // Longitud total del paquete PUBLISH
+    size_t packet_length = topic_length + message_length;
+>>>>>>> bc90712 (Packets creation (prototype))
 
     // Asignar memoria para el paquete
     MQTT_Packet publish_packet;
@@ -69,6 +81,7 @@ MQTT_Packet create_publish_packet(const char* topic, const char* message) {
     publish_packet.payload = NULL;
 
     // Rellenar el encabezado fijo y la longitud restante
+<<<<<<< HEAD
     publish_packet.fixed_header = MQTT_FIXED_HEADER_PUBLISH;
     publish_packet.remaining_length = packet_length - 2;  // restar 2 para el Length del encabezado variable
 
@@ -85,6 +98,22 @@ MQTT_Packet create_publish_packet(const char* topic, const char* message) {
     // Liberar la memoria de los buffers de codificación UTF-8
     free(encoded_topic);
     free(encoded_message);
+=======
+    publish_packet.fixed_header = 0x30; // PUBLISH
+    publish_packet.remaining_length = packet_length;
+
+    // Rellenar el encabezado variable
+    // Topic Length
+    publish_packet.variable_header[0] = topic_length >> 8; // MSB
+    publish_packet.variable_header[1] = topic_length & 0xFF; // LSB
+
+    // Topic Name
+    memcpy(&publish_packet.variable_header[2], topic, topic_length);
+
+    // Payload (mensaje)
+    publish_packet.payload = malloc(message_length);
+    memcpy(publish_packet.payload, message, message_length);
+>>>>>>> bc90712 (Packets creation (prototype))
 
     return publish_packet;
 }

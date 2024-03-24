@@ -6,63 +6,70 @@
 #include <string.h> 
 #include <sys/socket.h> 
 #include <sys/types.h> 
-#include <unistd.h>
-#include <pthread.h>
+#include <unistd.h> // read(), write(), close()
+#include <pthread.h> // Para utilizar hilos (threads)
 
 #define MAX 80 
+#define CONFIG_FILE "config.txt" // Nombre del archivo de configuración
 #define SA struct sockaddr 
 
-// Function designed for chat between client and server. 
-void *func(void *arg) { 
+// Función diseñada para el chat entre cliente y servidor. 
+void *func(void *arg) 
+{ 
     int connfd = *((int*)arg);
 	char buff[MAX]; 
 	int n; 
-	// Infinite loop for chat 
+	// Bucle infinito para el chat 
 	for (;;) { 
 		bzero(buff, MAX); 
 
-		// Read the message from client and copy it to buffer 
+		// Leer el mensaje del cliente y copiarlo en el buffer 
 		read(connfd, buff, sizeof(buff)); 
-		// Print buffer which contains the client contents 
+		// Imprimir el buffer que contiene el contenido del cliente 
 		printf("From client: %s\t To client : ", buff); 
 		bzero(buff, MAX); 
 		n = 0; 
-		// Copy server message in the buffer 
+		// Copiar el mensaje del servidor en el buffer 
 		while ((buff[n++] = getchar()) != '\n') 
 			; 
 
-		// and send that buffer to client 
+		// y enviar ese buffer al cliente 
 		write(connfd, buff, sizeof(buff)); 
 
-		// If message contains "Exit" then server exit and chat ended. 
+		// Si el mensaje contiene "Exit" entonces el servidor sale y el chat termina. 
 		if (strncmp("exit", buff, 4) == 0) { 
 			printf("Server Exit...\n"); 
 			break; 
 		} 
 	} 
-	close(connfd); // Close the connection with this client
+	close(connfd); // Cerrar la conexión con este cliente
 	return NULL;
 } 
 
-int main(int argc, char *argv[]) { 
+// Función principal 
+int main() 
+{ 
 	int sockfd, connfd, len; 
-	char ip[MAX], log_path[MAX];
+	struct sockaddr_in servaddr, cli; 
+
+	// Leer IP y puerto desde el archivo de configuración
+    FILE *config_file = fopen(CONFIG_FILE, "r");
+    if (config_file == NULL)
+    {
+        perror("Error opening config file");
+        exit(EXIT_FAILURE);
+    }
+
+    char ip[MAX];
     int port;
-	struct sockaddr_in servaddr, cli;
+    if (fscanf(config_file, "%s%d", ip, &port) != 2)
+    {
+        perror("Error reading config file");
+        exit(EXIT_FAILURE);
+    }
+    fclose(config_file);
 
-	if (argc == 4) {
-		strcpy(ip, argv[1]);
-		port = atoi(argv[2]);
-		strcpy(log_path, argv[3]);
-	}
-	else
-		return 1;
-
-	printf("IP: %s\n", ip);
-	printf("PORT %d\n", port);
-	printf("PATH: %s\n", log_path);
-
-	// Create socket
+	// Crear el socket
 	sockfd = socket(AF_INET, SOCK_STREAM, 0); 
 	if (sockfd == -1) { 
 		printf("socket creation failed...\n"); 
@@ -72,12 +79,12 @@ int main(int argc, char *argv[]) {
 		printf("Socket successfully created..\n"); 
 	bzero(&servaddr, sizeof(servaddr)); 
 
-	// Assign IP and PORT
+	// Asignar IP y PORT
 	servaddr.sin_family = AF_INET; 
 	servaddr.sin_addr.s_addr = inet_addr(ip); 
 	servaddr.sin_port = htons(port); 
 
-	// Bind socket to IP and PORT
+	// Enlazar el socket al IP y PORT
 	if ((bind(sockfd, (SA*)&servaddr, sizeof(servaddr))) != 0) { 
 		printf("socket bind failed...\n"); 
 		exit(0); 
@@ -85,7 +92,7 @@ int main(int argc, char *argv[]) {
 	else
 		printf("Socket successfully binded..\n"); 
 
-	// Listen for incoming connections
+	// Escuchar las conexiones entrantes
 	if ((listen(sockfd, 5)) != 0) { 
 		printf("Listen failed...\n"); 
 		exit(0); 
@@ -95,9 +102,9 @@ int main(int argc, char *argv[]) {
 
     len = sizeof(cli); 
 
-	// Loop to accept incoming connections
+	// Bucle para aceptar conexiones entrantes
 	while (1) {
-		// Accept the data packet from client
+		// Aceptar el paquete de datos del cliente
 		connfd = accept(sockfd, (SA*)&cli, &len); 
 		if (connfd < 0) { 
 			printf("server accept failed...\n"); 
@@ -106,10 +113,10 @@ int main(int argc, char *argv[]) {
 		else
 			printf("server accept the client...\n"); 
 		
-		pthread_t tid; // Thread identifier
-		pthread_create(&tid, NULL, func, &connfd); // Create a thread to handle this connection
+		pthread_t tid; // Identificador del hilo
+		pthread_create(&tid, NULL, func, &connfd); // Crear un hilo para manejar esta conexión
 	}
 
-	close(sockfd); // Close the main socket
+	close(sockfd); // Cerrar el socket principal
 	return 0;
 }
