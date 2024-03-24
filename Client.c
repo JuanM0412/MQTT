@@ -5,16 +5,18 @@
 #include <string.h>
 #include <strings.h>
 #include <sys/socket.h>
-#include <unistd.h>
+#include <unistd.h> // read(), write(), close()
 
 #define MAX 80
-#define CONFIG_FILE "config.txt"
+#define CONFIG_FILE "config.txt" // Nombre del archivo de configuración
 #define SA struct sockaddr
 
-void func(int sockfd) {
+void func(int sockfd)
+{
     char buff[MAX];
     int n;
-    for (;;) {
+    for (;;)
+    {
         bzero(buff, sizeof(buff));
         printf("Enter the string : ");
         n = 0;
@@ -24,7 +26,8 @@ void func(int sockfd) {
         bzero(buff, sizeof(buff));
         read(sockfd, buff, sizeof(buff));
         printf("From Server : %s", buff);
-        if ((strncmp(buff, "exit", 4)) == 0) {
+        if ((strncmp(buff, "exit", 4)) == 0)
+        {
             printf("Client Exit...\n");
             break;
         }
@@ -35,16 +38,18 @@ int main() {
     int sockfd, connfd;
     struct sockaddr_in servaddr, cli;
 
-    // Read IP and port from the configuration file
+    // Leer IP y puerto desde el archivo de configuración
     FILE *config_file = fopen(CONFIG_FILE, "r");
-    if (config_file == NULL) {
+    if (config_file == NULL)
+    {
         perror("Error opening config file");
         exit(EXIT_FAILURE);
     }
 
     char ip[MAX];
     int port;
-    if (fscanf(config_file, "%s%d", ip, &port) != 2) {
+    if (fscanf(config_file, "%s%d", ip, &port) != 2)
+    {
         perror("Error reading config file");
         exit(EXIT_FAILURE);
     }
@@ -57,6 +62,7 @@ int main() {
         exit(EXIT_FAILURE);
     } else
         printf("Socket successfully created..\n");
+
     bzero(&servaddr, sizeof(servaddr));
 
     // Assign IP, PORT
