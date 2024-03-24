@@ -28,8 +28,8 @@ void *func(void *arg)
 		printf("From client: %s\t To client : ", buff); 
 		bzero(buff, MAX); 
 		n = 0; 
-		// Copiar el mensaje del servidor en el buffer 
-		while ((buff[n++] = getchar()) != '\n') 
+		// Copiar el mensaje del servidor en el buffer
+		while ((buff[n++] = getchar()) != '\n')
 			; 
 
 		// y enviar ese buffer al cliente 
