@@ -14,9 +14,24 @@
 
 // Function to send a CONNECT packet to the server
 void send_connect_packet(int sockfd) {
-    MQTT_Packet connect_packet = create_connect_packet(0, 12);
+    MQTT_Packet connect_packet = create_connect_packet(0, "client");
     
     write(sockfd, &connect_packet, sizeof(connect_packet));
+
+    free_packet(&connect_packet);
+}
+
+void send_publish_packet(int sockfd) {
+    MQTT_Packet publish_packet = create_publish_packet("test/01", "sending");
+    
+    // Serializar el paquete antes de enviarlo
+    char buffer[sizeof(MQTT_Packet)];
+    memcpy(buffer, &publish_packet, sizeof(MQTT_Packet));
+
+    // Enviar el paquete serializado
+    write(sockfd, buffer, sizeof(buffer));
+
+    free_packet(&publish_packet);
 }
 
 int main() {
@@ -64,7 +79,7 @@ int main() {
         printf("connected to the server..\n");
 
     // Function for chat
-    func(sockfd);
+    send_publish_packet(sockfd);
 
     // Close the socket
     close(sockfd);

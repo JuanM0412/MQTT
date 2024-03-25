@@ -7,49 +7,47 @@
 #include <sys/types.h> 
 #include <unistd.h> // read(), write(), close()
 #include <pthread.h> // For using threads
+#include "Packets/packet.c"
 
 #define MAX 80 
 #define CONFIG_FILE "config.txt" // Configuration file name
 #define SA struct sockaddr 
 
-// Function designed for the chat between client and server
-void *func(void *arg) { 
+// Función para recibir y procesar un paquete MQTT
+void handle_mqtt_packet(char *buffer) {
+    MQTT_Packet received_packet;
+    memcpy(&received_packet, buffer, sizeof(MQTT_Packet));
+
+    // Acceder al tópico y al mensaje
+    printf("Topic: %s\n", received_packet.variable_header);
+    printf("Message: %s\n", received_packet.payload);
+}
+
+// Función para el hilo de cliente
+void *func(void *arg) {
     int connfd = *((int*)arg);
-    char buff[MAX]; 
+    char buff[sizeof(MQTT_Packet)]; 
     int n; 
-    // Infinite loop for chat 
-    for (;;) { 
-        bzero(buff, MAX); 
 
-        // Read the message from client and copy it to buffer 
-        read(connfd, buff, sizeof(buff)); 
+    for (;;) {
+        bzero(buff, sizeof(buff));
+        read(connfd, buff, sizeof(buff));
 
-        // Check if the received packet is a CONNECT packet
-        if (buff[0] == 0x10) {
-            printf("Received CONNECT packet from client\n");
-            // Here you can add logic to handle the CONNECT packet, if needed
+        // Procesar el paquete MQTT recibido
+        handle_mqtt_packet(buff);
+
+        // Envía una respuesta al cliente si es necesario
+        // write(connfd, response, sizeof(response));
+
+        if (strncmp("exit", buff, 4) == 0) {
+            printf("Server Exit...\n");
+            break;
         }
+    }
 
-        // Print the buffer which contains the client contents 
-        printf("From client: %s\t To client : ", buff); 
-        bzero(buff, MAX); 
-        n = 0; 
-        // Copy server message to the buffer 
-        while ((buff[n++] = getchar()) != '\n') 
-            ; 
-
-        // and send that buffer to client 
-        write(connfd, buff, sizeof(buff)); 
-
-        // If message contains "Exit" then server exit and chat ended. 
-        if (strncmp("exit", buff, 4) == 0) { 
-            printf("Server Exit...\n"); 
-            break; 
-        } 
-    } 
-    close(connfd); // Close this connection with client
+    close(connfd);
     return NULL;
-} 
+}
 
 // Main function 
 int main() { 
