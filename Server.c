@@ -7,6 +7,7 @@
 #include <sys/types.h> 
 #include <unistd.h> // read(), write(), close()
 #include <pthread.h> // For using threads
+#include <arpa/inet.h>
 #include "Packets/packet.c"
 
 #define MAX 80 
