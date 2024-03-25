@@ -7,7 +7,8 @@
 #include <sys/socket.h> 
 #include <sys/types.h> 
 #include <unistd.h> // read(), write(), close()
-#include <pthread.h> // Para utilizar hilos (threads)
+#include <pthread.h> // For using threads
+#include "Packets/packet.c"
 
 #define MAX 80 
 #define CONFIG_FILE "config.txt" // Nombre del archivo de configuración
