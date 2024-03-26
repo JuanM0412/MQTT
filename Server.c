@@ -10,6 +10,7 @@
 #include <pthread.h> // For using threads
 #include <arpa/inet.h>
 #include "Packets/packet.c"
+#include "encode/Decode.c"
 
 #define MAX 80 
 #define CONFIG_FILE "config.txt" // Nombre del archivo de configuración
