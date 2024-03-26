@@ -7,6 +7,7 @@
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 >>>>>>> cbcd588 (Prepare to merge with tree)
 =======
@@ -23,6 +24,12 @@
 >>>>>>> cbcd588 (Prepare to merge with tree)
 =======
 >>>>>>> 8aac86d (Packet identification, and includes were corrected)
+=======
+#define MQTT_FIXED_HEADER_PUBLISH 0x30
+#define MAX_TOPIC_LENGTH 256  // Tamaño máximo del tema
+#define MAX_MESSAGE_LENGTH 1024  // Tamaño máximo del mensaje
+
+>>>>>>> 443a3dd (Prepare to merge with tree)
 MQTT_Packet create_connect_packet(u_int16_t keep_alive, const char* client_id) {
     // Calcular la longitud del cliente ID
     size_t client_id_length = strlen(client_id);
