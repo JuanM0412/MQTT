@@ -5,6 +5,10 @@ main.c
 s.c
 test.c
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 command.txt
 >>>>>>> bc90712 (Packets creation (prototype))
+=======
+command.txt
+>>>>>>> 682d467 (Prototype for sending messages from Client to Broker)

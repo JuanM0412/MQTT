@@ -3,8 +3,6 @@
 #include <string.h>
 #include "Tree.h"
 
-
-
 TreeNode* createTreeNode(const char *name) {
     TreeNode *new_node = (TreeNode*)malloc(sizeof(TreeNode));
     if (new_node == NULL) {
@@ -139,6 +137,7 @@ void printTree(TreeNode *node, int depth) {
         printTree(node->children[i], depth + 1);
     }
 }
+<<<<<<< HEAD
 
 
 
@@ -250,3 +249,5 @@ int main() {
 
 =======
 >>>>>>> 3c24461 (Tree basic structure)
+=======
+>>>>>>> 682d467 (Prototype for sending messages from Client to Broker)

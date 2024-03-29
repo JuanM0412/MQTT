@@ -116,5 +116,6 @@ unsigned char* encodeMessageToUTF8(const char *message) {
     }
 
     buffer[offset] = '\0';
+
     return buffer;
 }
