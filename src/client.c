@@ -6,7 +6,13 @@
 #include <strings.h>
 #include <sys/socket.h>
 #include <unistd.h>
+<<<<<<< HEAD:Client.c
 #include "Packets/packet.c"
+=======
+#include "../include/encode.h"
+#include "../include/decode.h"
+#include "../include/packet.h"
+>>>>>>> 9ae1787 (Project structure):src/client.c
 
 #define MAX 80
 #define CONFIG_FILE "config.txt" // Configuration file name
