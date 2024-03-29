@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "Encode.h"
+#include "../include/encode.h"
 
 int necessaryBytes(unsigned int codePoint) {
     if (codePoint <= 0x7F) {

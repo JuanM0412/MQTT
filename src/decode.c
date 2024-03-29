@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "Decode.h"
+#include "../include/decode.h"
 
 int bytesPerCharacterUTF8(unsigned char byte) {
     if ((byte & 0x80) == 0) {

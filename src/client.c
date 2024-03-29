@@ -6,10 +6,9 @@
 #include <strings.h>
 #include <sys/socket.h>
 #include <unistd.h>
-#include "encode/Encode.c"
-#include "encode/Decode.c"
-#include "Packets/packet.c"
-#include "tree/Tree.c"
+#include "../include/encode.h"
+#include "../include/decode.h"
+#include "../include/packet.h"
 
 #define MAX 80
 #define CONFIG_FILE "config.txt"
