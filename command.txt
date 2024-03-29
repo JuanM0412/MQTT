@@ -1,0 +1,4 @@
+gcc -o bin/server src/server.c src/tree.c src/decode.c src/encode.c src/packet.c -lpthread
+./bin/server 172.31.84.211 1833 a
+gcc -o bin/client src/client.c src/decode.c src/encode.c src/packet.c -lpthread
+./bin/server 0.0.0.0.0 1833 log
