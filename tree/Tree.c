@@ -3,8 +3,6 @@
 #include <string.h>
 #include "Tree.h"
 
-
-
 TreeNode* createTreeNode(const char *name) {
     TreeNode *new_node = (TreeNode*)malloc(sizeof(TreeNode));
     if (new_node == NULL) {
@@ -93,28 +91,4 @@ void printTree(TreeNode *node, int depth) {
     for (int i = 0; i < node->num_children; i++) {
         printTree(node->children[i], depth + 1);
     }
-}
-
-
-
-int main() {
-    TreeNode *root = createTreeNode("root");
-
-    char input[100];
-    printf("Ingrese el string con el formato /nodo1/nodo2/nodoN Mensaje: \n");
-    while (fgets(input, sizeof(input), stdin) != NULL) {
-        input[strcspn(input, "\n")] = '\0';
-        
-        insertMessage(root, input);
-
-        printf("Mensaje insertado correctamente.\n");
-
-        printf("Ingrese el siguiente string o presione Ctrl + D para salir: \n");
-    }
-
-    printTree(root, 0);
-
-    freeTreeNode(root);
-
-    return 0;
 }
