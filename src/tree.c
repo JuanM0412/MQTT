@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "Tree.h"
+#include "../include/tree.h"
 
 TreeNode* createTreeNode(const char *name) {
     TreeNode *new_node = (TreeNode*)malloc(sizeof(TreeNode));

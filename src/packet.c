@@ -1,7 +1,7 @@
 #include <stdlib.h>
-#include "packet.h"
 #include <string.h>
 #include <sys/types.h>
+#include "../include/packet.h"
 
 <<<<<<< HEAD
 <<<<<<< HEAD

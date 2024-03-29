@@ -9,10 +9,10 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <arpa/inet.h>
-#include "encode/Encode.c"
-#include "encode/Decode.c"
-#include "Packets/packet.c"
-#include "tree/Tree.c"
+#include "../include/encode.h"
+#include "../include/decode.h"
+#include "../include/packet.h"
+#include "../include/tree.h"
 
 #define MAX 80 
 #define CONFIG_FILE "config.txt" // Configuration file name
@@ -55,29 +55,21 @@ void *func(void *arg) {
 }
 
 // Main function 
-int main() { 
+int main(int argc, char *argv[]) { 
     int sockfd, connfd, len; 
     struct sockaddr_in servaddr, cli; 
-
-    // Read IP and port from the configuration file
-    FILE *config_file = fopen(CONFIG_FILE, "r");
-    if (config_file == NULL)
-    {
-        perror("Error opening config file");
-        exit(EXIT_FAILURE);
-    }
-
-    char ip[MAX];
+    char ip[MAX], log_path[MAX];
     int port;
-    if (fscanf(config_file, "%s%d", ip, &port) != 2)
-    {
-        perror("Error reading config file");
-        exit(EXIT_FAILURE);
-    }
 
-    fclose(config_file);
+    if (argc == 4) {
+		strcpy(ip, argv[1]);
+		port = atoi(argv[2]);
+		strcpy(log_path, argv[3]);
+	}
+	else
+		return 1;
 
-    // Create the socket
+    // Create socket
     sockfd = socket(AF_INET, SOCK_STREAM, 0); 
     if (sockfd == -1) { 
         printf("socket creation failed...\n"); 
