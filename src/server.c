@@ -14,8 +14,7 @@
 #include "../include/tree.h"
 
 #define MAX 180
-#define CONFIG_FILE "config.txt"
-#define SA struct sockaddr 
+#define SA struct sockaddr
 
 MQTT_Packet receive_packet_from_client(int connfd) {
     MQTT_Packet received_packet;
@@ -49,7 +48,7 @@ MQTT_Packet receive_packet_from_client(int connfd) {
 }
 
 // Function designed for chat between client and server
-void *func(void *arg) { 
+void *process_connection(void *arg) { 
     int connfd = *((int*)arg);
     
     // Receive packet from client
@@ -66,6 +65,8 @@ void *func(void *arg) {
         printf("%02X ", received_packet.payload[i]);
     }
     printf("\n");
+
+    printf("Fixed Header: %02X\n", received_packet.fixed_header);
 
     // Concatenate variable header and payload into a single buffer
     size_t total_length = received_packet.remaining_length + strlen(received_packet.payload);
@@ -166,7 +167,7 @@ int main(int argc, char *argv[]) {
         
         pthread_t tid; // Thread ID
         printf("Thread ID: %lu\n", (unsigned long)tid);
-        pthread_create(&tid, NULL, func, &connfd); // Create a thread to handle this connection
+        pthread_create(&tid, NULL, process_connection, &connfd); // Create a thread to handle this connection
     }
 
     close(sockfd); // Close the main socket

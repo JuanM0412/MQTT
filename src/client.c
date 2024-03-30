@@ -11,23 +11,48 @@
 #include "../include/packet.h"
 
 #define MAX 80
-#define CONFIG_FILE "config.txt"
+#define CONFIG_FILE "../config.txt"
 #define SA struct sockaddr
 
-void send_packet_to_server(int sockfd, MQTT_Packet packet) {
+void send_packet_connect(int sockfd, MQTT_Packet packet) {
     printf("Fixed Header: %u\n", packet.fixed_header);
     printf("Remaining Length: %u\n", packet.remaining_length);
-    printf("Variable Header: ");
-    for (int i = 0; i < packet.remaining_length; i++) {
-        printf("%02X ", packet.variable_header[i]);
-    }
-    printf("\n");
     
-    printf("Payload: ");
-    for (int i = 0; i < packet.remaining_length; i++) {
-        printf("%02X ", packet.payload[i]);
+    // Calcular el tamaño total del paquete
+    size_t total_size = 1 + sizeof(packet.remaining_length) +
+                        packet.remaining_length;
+
+    // Crear un búfer para almacenar el paquete MQTT
+    unsigned char buffer[total_size];
+    size_t offset = 0;
+
+    // Copiar el encabezado fijo en el búfer
+    buffer[offset++] = packet.fixed_header;
+
+    // Copiar la longitud restante en el búfer
+    buffer[offset++] = packet.remaining_length;
+
+    // Copiar el encabezado variable en el búfer
+    memcpy(buffer + offset, packet.variable_header, packet.remaining_length);
+    offset += packet.remaining_length;
+
+    // Enviar el paquete a través del socket
+    ssize_t bytes_sent = send(sockfd, buffer, total_size, 0);
+    if (bytes_sent < 0) {
+        perror("Error sending packet to server");
+        exit(EXIT_FAILURE);
+    } else if (bytes_sent != total_size) {
+        fprintf(stderr, "Incomplete packet sent to server\n");
+        exit(EXIT_FAILURE);
+    } else {
+        printf("Packet sent successfully\n");
     }
-    printf("\n");
+}
+
+void send_packet_subscribe(int sockfd, MQTT_Packet packet) {
+    printf("Fixed Header: %u\n", packet.fixed_header);
+    printf("Remaining Length: %u\n", packet.remaining_length);
+
     // Calculate total size of the packet
     size_t total_size = sizeof(packet.fixed_header) + sizeof(packet.remaining_length) +
                         packet.remaining_length + sizeof(packet.payload);
@@ -50,6 +75,37 @@ void send_packet_to_server(int sockfd, MQTT_Packet packet) {
 
     // Send the buffer through the socket
     write(sockfd, buffer, total_size);
+}
+
+void send_packet_to_server(int sockfd, MQTT_Packet packet) {
+    printf("Fixed Header: %u\n", packet.fixed_header);
+    printf("Remaining Length: %u\n", packet.remaining_length);
+    // Calculate total size of the packet
+    size_t total_size = sizeof(packet.fixed_header) + sizeof(packet.remaining_length) +
+                        packet.remaining_length + sizeof(packet.payload);
+
+    // Serialize structure data into a byte buffer
+    unsigned char buffer[total_size];
+    size_t offset = 0;
+
+    // Copy structure fields into buffer
+    memcpy(buffer + offset, &packet.fixed_header, sizeof(packet.fixed_header));
+    offset += sizeof(packet.fixed_header);
+
+    memcpy(buffer + offset, &packet.remaining_length, sizeof(packet.remaining_length));
+    offset += sizeof(packet.remaining_length);
+
+    memcpy(buffer + offset, packet.variable_header, packet.remaining_length);
+    offset += packet.remaining_length;
+
+    memcpy(buffer + offset, packet.payload, sizeof(packet.payload));
+
+    // Send the buffer through the socket
+    write(sockfd, buffer, total_size);
+
+    while(1){
+        ;;
+    }
 }
 
 int main() {
@@ -98,9 +154,9 @@ int main() {
     else
         printf("connected to the server..\n");
 
-    MQTT_Packet publish_packet = create_publish_packet(encodeMessageToUTF8("EAFIT/Sede/Poblado/Bloque/33/Salon/301/humedad"), encodeMessageToUTF8("33%"));
+    MQTT_Packet packet = create_subscribe_packet(encodeMessageToUTF8("EAFIT/Sede/Poblado/Bloque/33/Salon/301/humedad"));
     // Send the packet to the server
-    send_packet_to_server(sockfd, publish_packet);
+    send_packet_subscribe(sockfd, packet);
 
     // Close the socket
     close(sockfd);
