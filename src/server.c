@@ -1,7 +1,6 @@
 #include <stdio.h> 
 #include <netdb.h> 
 #include <netinet/in.h> 
-#include <arpa/inet.h>
 #include <stdlib.h> 
 #include <string.h> 
 #include <sys/socket.h> 
@@ -17,18 +16,39 @@
 #define MAX 180
 #define SA struct sockaddr
 
-// Función para recibir y procesar un paquete MQTT
-void handle_mqtt_packet(char *buffer) {
+MQTT_Packet receive_packet_from_client(int connfd) {
     MQTT_Packet received_packet;
-    memcpy(&received_packet, buffer, sizeof(MQTT_Packet));
 
-    // Acceder al tópico y al mensaje
-    printf("Topic: %s\n", received_packet.variable_header);
-    printf("Message: %s\n", received_packet.payload);
+    // Read data from socket
+    unsigned char buffer[MAX];
+    ssize_t bytes_received = read(connfd, buffer, sizeof(buffer));
+    if (bytes_received <= 0) {
+        exit(EXIT_FAILURE);
+    }
+
+    // Parse data from buffer and fill MQTT_Packet structure
+    size_t offset = 0;
+
+    memcpy(&received_packet.fixed_header, buffer + offset, sizeof(received_packet.fixed_header));
+    offset += sizeof(received_packet.fixed_header);
+
+    memcpy(&received_packet.remaining_length, buffer + offset, sizeof(received_packet.remaining_length));
+    offset += sizeof(received_packet.remaining_length);
+
+    received_packet.variable_header = malloc(received_packet.remaining_length);
+    memcpy(received_packet.variable_header, buffer + offset, received_packet.remaining_length);
+    offset += received_packet.remaining_length;
+
+    // Calculate payload size
+    size_t payload_size = bytes_received - offset;
+    received_packet.payload = malloc(payload_size);
+    memcpy(received_packet.payload, buffer + offset, payload_size);
+
+    return received_packet;
 }
 
 // Function designed for chat between client and server
-void *func(void *arg) { 
+void *process_connection(void *arg) { 
     int connfd = *((int*)arg);
     
     // Receive packet from client
@@ -45,6 +65,8 @@ void *func(void *arg) {
         printf("%02X ", received_packet.payload[i]);
     }
     printf("\n");
+
+    printf("Fixed Header: %02X\n", received_packet.fixed_header);
 
     // Concatenate variable header and payload into a single buffer
     size_t total_length = received_packet.remaining_length + strlen(received_packet.payload);
@@ -80,6 +102,7 @@ void *func(void *arg) {
 
     // Close connection with this client
     close(connfd);
+    
     return NULL;
 }
 
@@ -106,14 +129,14 @@ int main(int argc, char *argv[]) {
     } 
     else
         printf("Socket successfully created..\n"); 
+    
     bzero(&servaddr, sizeof(servaddr)); 
-
     // Assign IP and PORT
     servaddr.sin_family = AF_INET; 
     servaddr.sin_addr.s_addr = inet_addr(ip); 
     servaddr.sin_port = htons(port); 
 
-    // Bind the socket with the server address 
+    // Bind socket to IP and PORT
     if ((bind(sockfd, (SA*)&servaddr, sizeof(servaddr))) != 0) { 
         printf("socket bind failed...\n"); 
         exit(0); 
@@ -121,7 +144,7 @@ int main(int argc, char *argv[]) {
     else
         printf("Socket successfully binded..\n"); 
 
-    // Listen to connections
+    // Listen for incoming connections
     if ((listen(sockfd, 5)) != 0) { 
         printf("Listen failed...\n"); 
         exit(0); 
@@ -131,9 +154,9 @@ int main(int argc, char *argv[]) {
 
     len = sizeof(cli); 
 
-    // Infinite loop to accept incoming connections
+    // Loop to accept incoming connections
     while (1) {
-        // Accept the data packet from client and verification
+        // Accept data packet from client
         connfd = accept(sockfd, (SA*)&cli, &len); 
         if (connfd < 0) { 
             printf("server accept failed...\n"); 
@@ -144,9 +167,15 @@ int main(int argc, char *argv[]) {
         
         pthread_t tid; // Thread ID
         printf("Thread ID: %lu\n", (unsigned long)tid);
-        pthread_create(&tid, NULL, func, &connfd); // Create a thread to handle this connection
+        pthread_create(&tid, NULL, process_connection, &connfd); // Create a thread to handle this connection
     }
 
+<<<<<<< HEAD
 	close(sockfd); // Cerrar el socket principal
 	return 0;
 }
+=======
+    close(sockfd); // Close the main socket
+    return 0;
+}
+>>>>>>> e8bb04a (Solving merge bugs)
