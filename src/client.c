@@ -57,20 +57,24 @@ void send_packet_subscribe(int sockfd, MQTT_Packet packet) {
     size_t total_size = sizeof(packet.fixed_header) + sizeof(packet.remaining_length) +
                         packet.remaining_length + sizeof(packet.payload);
 
-    free_packet(&packet);
-}
+    // Serialize structure data into a byte buffer
+    unsigned char buffer[total_size];
+    size_t offset = 0;
 
-void send_publish_packet(int sockfd) {
-    MQTT_Packet publish_packet = create_publish_packet("test/01", "sending");
-    
-    // Serializar el paquete antes de enviarlo
-    char buffer[sizeof(MQTT_Packet)];
-    memcpy(buffer, &publish_packet, sizeof(MQTT_Packet));
+    // Copy structure fields into buffer
+    memcpy(buffer + offset, &packet.fixed_header, sizeof(packet.fixed_header));
+    offset += sizeof(packet.fixed_header);
 
-    // Enviar el paquete serializado
-    write(sockfd, buffer, sizeof(buffer));
+    memcpy(buffer + offset, &packet.remaining_length, sizeof(packet.remaining_length));
+    offset += sizeof(packet.remaining_length);
 
-    free_packet(&publish_packet);
+    memcpy(buffer + offset, packet.variable_header, packet.remaining_length);
+    offset += packet.remaining_length;
+
+    memcpy(buffer + offset, packet.payload, sizeof(packet.payload));
+
+    // Send the buffer through the socket
+    write(sockfd, buffer, total_size);
 }
 
 void send_packet_to_server(int sockfd, MQTT_Packet packet) {
@@ -106,14 +110,12 @@ void send_packet_to_server(int sockfd, MQTT_Packet packet) {
 
 int main() {
     int sockfd, connfd;
-    struct sockaddr_in servaddr;
-    char ip[MAX];
-    int port;
-    FILE *config_file;
+    struct sockaddr_in servaddr, cli;
 
-    // Read IP and port from the configuration file
-    config_file = fopen(CONFIG_FILE, "r");
-    if (config_file == NULL) {
+    // Read IP and port from configuration file
+    FILE *config_file = fopen(CONFIG_FILE, "r");
+    if (config_file == NULL)
+    {
         perror("Error opening config file");
         exit(EXIT_FAILURE);
     }
@@ -133,7 +135,8 @@ int main() {
     {
         printf("socket creation failed...\n");
         exit(EXIT_FAILURE);
-    } else
+    }
+    else
         printf("Socket successfully created..\n");
     bzero(&servaddr, sizeof(servaddr));
 
@@ -147,7 +150,8 @@ int main() {
     {
         printf("connection with the server failed...\n");
         exit(EXIT_FAILURE);
-    } else
+    }
+    else
         printf("connected to the server..\n");
 
     MQTT_Packet packet = create_subscribe_packet(encodeMessageToUTF8("EAFIT/Sede/Poblado/Bloque/33/Salon/301/humedad"));
