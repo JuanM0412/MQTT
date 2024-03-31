@@ -12,9 +12,56 @@
 #include "../include/decode.h"
 #include "../include/packet.h"
 #include "../include/tree.h"
+#include "../include/server.h"
 
-#define MAX 180
-#define SA struct sockaddr
+void disconnect_client(int connfd) {
+    close(connfd);
+}
+
+void handle_publish_packet(MQTT_Packet packet) {
+    size_t topic_length = (packet.variable_header[0] << 8) | packet.variable_header[1];
+    size_t payload_length = packet.remaining_length - topic_length;
+    char* message;
+
+    char* topic = malloc(topic_length + 1); // +1 -> \0
+    memcpy(topic, &packet.variable_header[2], topic_length);
+    topic[topic_length] = '\0';
+
+    for (int i = 0; i <= topic_length; i++) {
+        if (topic[i] == '+' || topic[i] == '#') {
+            printf("Wildcard character");
+        }
+    }
+
+    if (payload_length > 0) {
+        message = malloc(payload_length + 1);
+        memcpy(message, &packet.variable_header[2], payload_length);
+        message[payload_length] = '\0';
+    }
+}
+
+void handle_connect_packet(MQTT_Packet packet) {
+    size_t expected_length = 10 + (packet.variable_header[10] << 8) + packet.variable_header[11];
+
+    if (packet.remaining_length != expected_length)
+        printf("Remaining length");
+
+    if (packet.variable_header[1] != 0x04 || packet.variable_header[2] != 'M' ||
+        packet.variable_header[3] != 'Q' || packet.variable_header[4] != 'T' ||
+        packet.variable_header[5] != 'T' || packet.variable_header[6] != 0x04)
+        printf("Variable header");
+
+    printf("CONNECT");
+}
+
+void identify_packet(MQTT_Packet packet, int connfd) {
+    if (packet.fixed_header == MQTT_FIXED_HEADER_CONNECT)
+        handle_connect_packet(packet);
+    else if (packet.fixed_header == MQTT_FIXED_HEADER_PUBLISH)
+        handle_publish_packet(packet);
+    else if (packet.fixed_header == MQTT_FIXED_HEADER_DISCONNECT)
+        disconnect_client(connfd);
+}
 
 MQTT_Packet receive_packet_from_client(int connfd) {
     MQTT_Packet received_packet;
@@ -53,6 +100,7 @@ void *process_connection(void *arg) {
     
     // Receive packet from client
     MQTT_Packet received_packet = receive_packet_from_client(connfd);
+    identify_packet(received_packet, connfd);
 
     printf("Variable Header: ");
     for (int i = 0; i < received_packet.remaining_length; i++) {

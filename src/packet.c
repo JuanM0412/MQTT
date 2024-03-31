@@ -3,11 +3,6 @@
 #include <sys/types.h>
 #include "../include/packet.h"
 
-#define MQTT_FIXED_HEADER_CONNECT 0x10
-#define MQTT_FIXED_HEADER_PUBLISH 0x30
-#define MQTT_FIXED_HEADER_SUBSCRIBE 0x82
-#define MQTT_FIXED_HEADER_DISCONNECT 0xE0
-
 MQTT_Packet create_connect_packet(u_int16_t keep_alive, const char* client_id) {
     // Calcular la longitud del cliente ID
     size_t client_id_length = strlen(client_id);
