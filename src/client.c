@@ -154,6 +154,8 @@ int main() {
     else
         printf("connected to the server..\n");
 
+    //MQTT_Packet packet = create_connect_packet(0, "01");
+    //send_packet_connect(sockfd, packet);
     MQTT_Packet packet = create_subscribe_packet(encodeMessageToUTF8("EAFIT/Sede/Poblado/Bloque/33/Salon/301/humedad"));
     // Send the packet to the server
     send_packet_subscribe(sockfd, packet);

@@ -6,6 +6,7 @@
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 >>>>>>> cbcd588 (Prepare to merge with tree)
 =======
@@ -20,6 +21,8 @@
 >>>>>>> bc90712 (Packets creation (prototype))
 =======
 >>>>>>> cbcd588 (Prepare to merge with tree)
+=======
+>>>>>>> 8aac86d (Packet identification, and includes were corrected)
 MQTT_Packet create_connect_packet(u_int16_t keep_alive, const char* client_id) {
     // Calcular la longitud del cliente ID
     size_t client_id_length = strlen(client_id);
