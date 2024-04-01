@@ -138,11 +138,16 @@ void printTree(TreeNode *node, int depth) {
     }
 }
 <<<<<<< HEAD
+<<<<<<< HEAD
 
 
 
 <<<<<<< HEAD
 void SUB(TreeNode *root, const char *topic, int user) {
+=======
+
+void subscribe(TreeNode *root, const char *topic, int user) {
+>>>>>>> e6c6189 (Final merge with tree)
     char *topic_copy = strdup(topic);
     char *token = strtok(topic_copy, "/");
     TreeNode *current_node = root;
@@ -179,6 +184,7 @@ void SUB(TreeNode *root, const char *topic, int user) {
     free(topic_copy);
 }
 
+<<<<<<< HEAD
 
 
 
@@ -251,3 +257,41 @@ int main() {
 >>>>>>> 3c24461 (Tree basic structure)
 =======
 >>>>>>> 682d467 (Prototype for sending messages from Client to Broker)
+=======
+void publish(TreeNode *root, const char *topic, const char *message) {
+    char *topic_copy = strdup(topic);
+    char *token = strtok(topic_copy, "/");
+    TreeNode *current_node = root;
+
+    while (token != NULL) {
+        int child_index = -1;
+        for (int i = 0; i < current_node->num_children; i++) {
+            if (strcmp(current_node->children[i]->name, token) == 0) {
+                child_index = i;
+                break;
+            }
+        }
+
+        if (child_index == -1) {
+            current_node->children = (TreeNode **)realloc(current_node->children, (current_node->num_children + 1) * sizeof(TreeNode *));
+            current_node->children[current_node->num_children] = createTreeNode(token);
+            current_node->num_children++;
+            child_index = current_node->num_children - 1;
+        }
+
+        current_node = current_node->children[child_index];
+
+        token = strtok(NULL, "/");
+    }
+
+    if (current_node->messages == NULL) {
+        current_node->messages = (char **)malloc(sizeof(char *));
+    } else {
+        current_node->messages = (char **)realloc(current_node->messages, (current_node->num_messages + 1) * sizeof(char *));
+    }
+    current_node->messages[current_node->num_messages] = strdup(message);
+    current_node->num_messages++;
+
+    free(topic_copy);
+}
+>>>>>>> e6c6189 (Final merge with tree)

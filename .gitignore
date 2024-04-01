@@ -8,7 +8,11 @@ test.c
 <<<<<<< HEAD
 =======
 command.txt
+<<<<<<< HEAD
 >>>>>>> bc90712 (Packets creation (prototype))
 =======
 command.txt
 >>>>>>> 682d467 (Prototype for sending messages from Client to Broker)
+=======
+**/tree/*
+>>>>>>> e6c6189 (Final merge with tree)
