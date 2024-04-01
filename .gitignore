@@ -1,2 +1,8 @@
 **/bin/*
 config.txt
+**/.vscode/*
+main.c
+s.c
+test.c
+command.txt
+**/tree/*

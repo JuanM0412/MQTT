@@ -14,7 +14,7 @@ This file makes some considerations about the implementation of the MQTT Protoco
 
 ## 2.2. Fixed header
 
-![](img/Fixed_header.png)
+![](../img/Fixed_header.png)
 
 ### 2.2.1. MQTT Control Packet type
 **Position:** byte 1, bits 7 - 4.
