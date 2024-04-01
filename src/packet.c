@@ -3,10 +3,6 @@
 #include <sys/types.h>
 #include "../include/packet.h"
 
-#define MQTT_FIXED_HEADER_PUBLISH 0x30
-#define MAX_TOPIC_LENGTH 256  // Tamaño máximo del tema
-#define MAX_MESSAGE_LENGTH 1024  // Tamaño máximo del mensaje
-
 MQTT_Packet create_connect_packet(u_int16_t keep_alive, const char* client_id) {
     // Calcular la longitud del cliente ID
     size_t client_id_length = strlen(client_id);
