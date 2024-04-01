@@ -20,6 +20,7 @@ void disconnect_client(int connfd) {
 
 void handle_publish_packet(MQTT_Packet packet) {
     size_t topic_length = (packet.variable_header[0] << 8) | packet.variable_header[1];
+    printf("Longitud del tópico: %zu\n", topic_length);
     size_t payload_length = packet.remaining_length - topic_length;
     char* message;
 
@@ -59,6 +60,8 @@ void identify_packet(MQTT_Packet packet, int connfd) {
         handle_connect_packet(packet);
     else if (packet.fixed_header == MQTT_FIXED_HEADER_PUBLISH)
         handle_publish_packet(packet);
+    else if (packet.fixed_header == MQTT_FIXED_HEADER_SUBSCRIBE)
+        handle_subscribe_packet(packet);
     else if (packet.fixed_header == MQTT_FIXED_HEADER_DISCONNECT)
         disconnect_client(connfd);
 }
@@ -145,11 +148,7 @@ void *process_connection(void *arg) {
     strcat(topic_message, decoded_message);
 
     // Free memory
-    free(received_packet.variable_header);
-    free(received_packet.payload);
-
-    // Close connection with this client
-    close(connfd);
+    free_packet(&received_packet);
     
     return NULL;
 }
@@ -178,8 +177,7 @@ int main(int argc, char *argv[]) {
     else
         printf("Socket successfully created..\n"); 
     
-    bzero(&servaddr, sizeof(servaddr)); 
-    // Assign IP and PORT
+    bzero(&servaddr, sizeof(servaddr));
     servaddr.sin_family = AF_INET; 
     servaddr.sin_addr.s_addr = inet_addr(ip); 
     servaddr.sin_port = htons(port); 
@@ -201,10 +199,7 @@ int main(int argc, char *argv[]) {
         printf("Server listening..\n"); 
 
     len = sizeof(cli); 
-
-    // Loop to accept incoming connections
     while (1) {
-        // Accept data packet from client
         connfd = accept(sockfd, (SA*)&cli, &len); 
         if (connfd < 0) { 
             printf("server accept failed...\n"); 
@@ -213,11 +208,11 @@ int main(int argc, char *argv[]) {
         else
             printf("server accept the client...\n"); 
         
-        pthread_t tid; // Thread ID
+        pthread_t tid;
         printf("Thread ID: %lu\n", (unsigned long)tid);
-        pthread_create(&tid, NULL, process_connection, &connfd); // Create a thread to handle this connection
+        pthread_create(&tid, NULL, process_connection, &connfd);
     }
 
-    close(sockfd); // Close the main socket
+    close(sockfd);
     return 0;
 }

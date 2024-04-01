@@ -156,12 +156,16 @@ int main() {
 
     //MQTT_Packet packet = create_connect_packet(0, "01");
     //send_packet_connect(sockfd, packet);
-    MQTT_Packet packet = create_subscribe_packet(encodeMessageToUTF8("EAFIT/Sede/Poblado/Bloque/33/Salon/301/humedad"));
+    //MQTT_Packet packet = create_subscribe_packet(encodeMessageToUTF8("EAFIT/Sede/Poblado/Bloque/33/Salon/301/humedad"));
     // Send the packet to the server
-    send_packet_subscribe(sockfd, packet);
+    //send_packet_subscribe(sockfd, packet);
+    MQTT_Packet packet = create_publish_packet(encodeMessageToUTF8("EAFIT/Poblado/Bloque/33/Aula/301"), encodeMessageToUTF8("Humedad 22%"));
+    send_packet_to_server(sockfd, packet);
 
     // Close the socket
     close(sockfd);
+
+    free_packet(&packet);
 
     return 0;
 }

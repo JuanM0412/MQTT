@@ -3,7 +3,7 @@
 
 #include "../include/packet.h"
 
-#define MAX 80
+#define MAX 360
 #define SA struct sockaddr
 
 void disconnect_client(int connfd);
