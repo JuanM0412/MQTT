@@ -14,34 +14,59 @@
 #include "../include/tree.h"
 #include "../include/server.h"
 
+Tree* get_tree() {
+    static Tree singleton;
+    static int initialized = 0;
+
+    if (!initialized) {
+        singleton.tree = createTreeNode("/");
+        pthread_mutex_init(&singleton.mutex, NULL);
+        initialized = 1;
+    }
+
+    return &singleton;
+}
+
+void handle_tree(int request, const char *topic, const char *message) {
+    Tree *singleton_tree = get_tree();
+
+    pthread_mutex_lock(&singleton_tree->mutex);
+
+    publish(singleton_tree->tree, topic, message);
+    printTree(singleton_tree->tree, 0);
+
+    pthread_mutex_unlock(&singleton_tree->mutex);
+}
+
 void disconnect_client(int connfd) {
     close(connfd);
 }
 
-void handle_publish_packet(MQTT_Packet packet) {
+void handle_publish_packet(MQTT_Packet packet, int connfd) {
     size_t topic_length = (packet.variable_header[0] << 8) | packet.variable_header[1];
-    printf("Longitud del tópico: %zu\n", topic_length);
     size_t payload_length = packet.remaining_length - topic_length;
-    char* message;
+    printf("Longitud del tópico: %zu\n", topic_length);
+    printf("Longitud del payload: %zu\n", payload_length);
 
-    char* topic = malloc(topic_length + 1); // +1 -> \0
-    memcpy(topic, &packet.variable_header[2], topic_length);
-    topic[topic_length] = '\0';
+    size_t total_length = packet.remaining_length + strlen(packet.payload);
+    unsigned char *serialized_packet = malloc(total_length);
+    memcpy(serialized_packet, packet.variable_header, packet.remaining_length);
+    memcpy(serialized_packet + packet.remaining_length, packet.payload, strlen(packet.payload));
+    char *decoded_topic = decodeUTF8(serialized_packet + 2);
+    char *decoded_message = decodeUTF8(serialized_packet + packet.remaining_length);
 
     for (int i = 0; i <= topic_length; i++) {
-        if (topic[i] == '+' || topic[i] == '#') {
+        if (decoded_topic[i] == '+' || decoded_topic[i] == '#') {
             printf("Wildcard character");
         }
     }
+    
+    handle_tree(1, decoded_topic, decoded_message);
 
-    if (payload_length > 0) {
-        message = malloc(payload_length + 1);
-        memcpy(message, &packet.variable_header[2], payload_length);
-        message[payload_length] = '\0';
-    }
+    disconnect_client(connfd);
 }
 
-void handle_connect_packet(MQTT_Packet packet) {
+void handle_connect_packet(MQTT_Packet packet, int connfd) {
     size_t expected_length = 10 + (packet.variable_header[10] << 8) + packet.variable_header[11];
 
     if (packet.remaining_length != expected_length)
@@ -53,16 +78,16 @@ void handle_connect_packet(MQTT_Packet packet) {
         printf("Variable header");
 
     printf("CONNECT");
+
+    disconnect_client(connfd);
 }
 
 void identify_packet(MQTT_Packet packet, int connfd) {
     if (packet.fixed_header == MQTT_FIXED_HEADER_CONNECT)
-        handle_connect_packet(packet);
+        handle_connect_packet(packet, connfd);
     else if (packet.fixed_header == MQTT_FIXED_HEADER_PUBLISH)
-        handle_publish_packet(packet);
-    else if (packet.fixed_header == MQTT_FIXED_HEADER_SUBSCRIBE)
-        handle_subscribe_packet(packet);
-    else if (packet.fixed_header == MQTT_FIXED_HEADER_DISCONNECT)
+        handle_publish_packet(packet, connfd);
+    else
         disconnect_client(connfd);
 }
 
@@ -100,9 +125,8 @@ MQTT_Packet receive_packet_from_client(int connfd) {
 // Function designed for chat between client and server
 void *process_connection(void *arg) { 
     int connfd = *((int*)arg);
-    
-    // Receive packet from client
     MQTT_Packet received_packet = receive_packet_from_client(connfd);
+
     identify_packet(received_packet, connfd);
 
     printf("Variable Header: ");
@@ -199,6 +223,8 @@ int main(int argc, char *argv[]) {
         printf("Server listening..\n"); 
 
     len = sizeof(cli); 
+    Tree *singleton_tree = get_tree();
+
     while (1) {
         connfd = accept(sockfd, (SA*)&cli, &len); 
         if (connfd < 0) { 
