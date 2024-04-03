@@ -239,19 +239,6 @@ int main(int argc, char *argv[]) {
         pthread_create(&tid, NULL, process_connection, &connfd);
     }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-	close(sockfd); // Cerrar el socket principal
-	return 0;
-}
-=======
-    close(sockfd); // Close the main socket
-=======
     close(sockfd);
->>>>>>> fc606cc (Header file for the server and functions to manage the connection)
     return 0;
 }
-<<<<<<< HEAD
->>>>>>> e8bb04a (Solving merge bugs)
-=======
->>>>>>> 8aac86d (Packet identification, and includes were corrected)
