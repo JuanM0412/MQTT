@@ -1,7 +1,7 @@
 **/bin/*
 config.txt
 **/.vscode/*
-main.c
+m.c
 s.c
 test.c
 command.txt
