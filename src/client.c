@@ -164,8 +164,8 @@ int main() {
 
     // Close the socket
     close(sockfd);
-
+  
     free_packet(&packet);
-
+  
     return 0;
 }

@@ -8,7 +8,7 @@ typedef struct TreeNode {
     char **messages;
     int num_messages;
     int *users; 
-    int num_users; 
+    int num_users;
 } TreeNode;
 
 TreeNode* createTreeNode(const char *name);
