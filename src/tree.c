@@ -92,3 +92,77 @@ void printTree(TreeNode *node, int depth) {
         printTree(node->children[i], depth + 1);
     }
 }
+
+void subscribe(TreeNode *root, const char *topic, int user) {
+    char *topic_copy = strdup(topic);
+    char *token = strtok(topic_copy, "/");
+    TreeNode *current_node = root;
+
+    while (token != NULL) {
+        int child_index = -1;
+        for (int i = 0; i < current_node->num_children; i++) {
+            if (strcmp(current_node->children[i]->name, token) == 0) {
+                child_index = i;
+                break;
+            }
+        }
+
+        if (child_index == -1) {
+            current_node->children = (TreeNode **)realloc(current_node->children, (current_node->num_children + 1) * sizeof(TreeNode *));
+            current_node->children[current_node->num_children] = createTreeNode(token);
+            current_node->num_children++;
+            child_index = current_node->num_children - 1;
+        }
+
+        current_node = current_node->children[child_index];
+
+        token = strtok(NULL, "/");
+    }
+
+    if (current_node->users == NULL) {
+        current_node->users = (int *)malloc(sizeof(int));
+    } else {
+        current_node->users = (int *)realloc(current_node->users, (current_node->num_users + 1) * sizeof(int));
+    }
+    current_node->users[current_node->num_users] = user;
+    current_node->num_users++;
+
+    free(topic_copy);
+}
+
+void publish(TreeNode *root, const char *topic, const char *message) {
+    char *topic_copy = strdup(topic);
+    char *token = strtok(topic_copy, "/");
+    TreeNode *current_node = root;
+
+    while (token != NULL) {
+        int child_index = -1;
+        for (int i = 0; i < current_node->num_children; i++) {
+            if (strcmp(current_node->children[i]->name, token) == 0) {
+                child_index = i;
+                break;
+            }
+        }
+
+        if (child_index == -1) {
+            current_node->children = (TreeNode **)realloc(current_node->children, (current_node->num_children + 1) * sizeof(TreeNode *));
+            current_node->children[current_node->num_children] = createTreeNode(token);
+            current_node->num_children++;
+            child_index = current_node->num_children - 1;
+        }
+
+        current_node = current_node->children[child_index];
+
+        token = strtok(NULL, "/");
+    }
+
+    if (current_node->messages == NULL) {
+        current_node->messages = (char **)malloc(sizeof(char *));
+    } else {
+        current_node->messages = (char **)realloc(current_node->messages, (current_node->num_messages + 1) * sizeof(char *));
+    }
+    current_node->messages[current_node->num_messages] = strdup(message);
+    current_node->num_messages++;
+
+    free(topic_copy);
+}

@@ -12,9 +12,84 @@
 #include "../include/decode.h"
 #include "../include/packet.h"
 #include "../include/tree.h"
+#include "../include/server.h"
 
-#define MAX 180
-#define SA struct sockaddr
+Tree* get_tree() {
+    static Tree singleton;
+    static int initialized = 0;
+
+    if (!initialized) {
+        singleton.tree = createTreeNode("/");
+        pthread_mutex_init(&singleton.mutex, NULL);
+        initialized = 1;
+    }
+
+    return &singleton;
+}
+
+void handle_tree(int request, const char *topic, const char *message) {
+    Tree *singleton_tree = get_tree();
+
+    pthread_mutex_lock(&singleton_tree->mutex);
+
+    publish(singleton_tree->tree, topic, message);
+    printTree(singleton_tree->tree, 0);
+
+    pthread_mutex_unlock(&singleton_tree->mutex);
+}
+
+void disconnect_client(int connfd) {
+    close(connfd);
+}
+
+void handle_publish_packet(MQTT_Packet packet, int connfd) {
+    size_t topic_length = (packet.variable_header[0] << 8) | packet.variable_header[1];
+    size_t payload_length = packet.remaining_length - topic_length;
+    printf("Longitud del tópico: %zu\n", topic_length);
+    printf("Longitud del payload: %zu\n", payload_length);
+
+    size_t total_length = packet.remaining_length + strlen(packet.payload);
+    unsigned char *serialized_packet = malloc(total_length);
+    memcpy(serialized_packet, packet.variable_header, packet.remaining_length);
+    memcpy(serialized_packet + packet.remaining_length, packet.payload, strlen(packet.payload));
+    char *decoded_topic = decodeUTF8(serialized_packet + 2);
+    char *decoded_message = decodeUTF8(serialized_packet + packet.remaining_length);
+
+    for (int i = 0; i <= topic_length; i++) {
+        if (decoded_topic[i] == '+' || decoded_topic[i] == '#') {
+            printf("Wildcard character");
+        }
+    }
+    
+    handle_tree(1, decoded_topic, decoded_message);
+
+    disconnect_client(connfd);
+}
+
+void handle_connect_packet(MQTT_Packet packet, int connfd) {
+    size_t expected_length = 10 + (packet.variable_header[10] << 8) + packet.variable_header[11];
+
+    if (packet.remaining_length != expected_length)
+        printf("Remaining length");
+
+    if (packet.variable_header[1] != 0x04 || packet.variable_header[2] != 'M' ||
+        packet.variable_header[3] != 'Q' || packet.variable_header[4] != 'T' ||
+        packet.variable_header[5] != 'T' || packet.variable_header[6] != 0x04)
+        printf("Variable header");
+
+    printf("CONNECT");
+
+    disconnect_client(connfd);
+}
+
+void identify_packet(MQTT_Packet packet, int connfd) {
+    if (packet.fixed_header == MQTT_FIXED_HEADER_CONNECT)
+        handle_connect_packet(packet, connfd);
+    else if (packet.fixed_header == MQTT_FIXED_HEADER_PUBLISH)
+        handle_publish_packet(packet, connfd);
+    else
+        disconnect_client(connfd);
+}
 
 MQTT_Packet receive_packet_from_client(int connfd) {
     MQTT_Packet received_packet;
@@ -50,9 +125,9 @@ MQTT_Packet receive_packet_from_client(int connfd) {
 // Function designed for chat between client and server
 void *process_connection(void *arg) { 
     int connfd = *((int*)arg);
-    
-    // Receive packet from client
     MQTT_Packet received_packet = receive_packet_from_client(connfd);
+
+    identify_packet(received_packet, connfd);
 
     printf("Variable Header: ");
     for (int i = 0; i < received_packet.remaining_length; i++) {
@@ -97,11 +172,7 @@ void *process_connection(void *arg) {
     strcat(topic_message, decoded_message);
 
     // Free memory
-    free(received_packet.variable_header);
-    free(received_packet.payload);
-
-    // Close connection with this client
-    close(connfd);
+    free_packet(&received_packet);
     
     return NULL;
 }
@@ -130,8 +201,7 @@ int main(int argc, char *argv[]) {
     else
         printf("Socket successfully created..\n"); 
     
-    bzero(&servaddr, sizeof(servaddr)); 
-    // Assign IP and PORT
+    bzero(&servaddr, sizeof(servaddr));
     servaddr.sin_family = AF_INET; 
     servaddr.sin_addr.s_addr = inet_addr(ip); 
     servaddr.sin_port = htons(port); 
@@ -153,10 +223,9 @@ int main(int argc, char *argv[]) {
         printf("Server listening..\n"); 
 
     len = sizeof(cli); 
+    Tree *singleton_tree = get_tree();
 
-    // Loop to accept incoming connections
     while (1) {
-        // Accept data packet from client
         connfd = accept(sockfd, (SA*)&cli, &len); 
         if (connfd < 0) { 
             printf("server accept failed...\n"); 
@@ -165,11 +234,11 @@ int main(int argc, char *argv[]) {
         else
             printf("server accept the client...\n"); 
         
-        pthread_t tid; // Thread ID
+        pthread_t tid;
         printf("Thread ID: %lu\n", (unsigned long)tid);
-        pthread_create(&tid, NULL, process_connection, &connfd); // Create a thread to handle this connection
+        pthread_create(&tid, NULL, process_connection, &connfd);
     }
 
-    close(sockfd); // Close the main socket
+    close(sockfd);
     return 0;
 }
