@@ -108,6 +108,28 @@ void send_packet_to_server(int sockfd, MQTT_Packet packet) {
     }
 }
 
+void print_mqtt_packet(MQTT_Packet packet) {
+    printf("Fixed Header: 0x%02X\n", packet.fixed_header);
+    printf("Remaining Length: %d\n", packet.remaining_length);
+    printf("Variable Header: 0x%02X 0x%02X\n", packet.variable_header[0], packet.variable_header[1]);
+    printf("Payload:\n");
+    for (int i = 0; i < packet.remaining_length; ) {
+        // Leer longitud del tema
+        int topic_length = (packet.payload[i] << 8) | packet.payload[i + 1];
+        printf("Topic Length: %d\n", topic_length);
+
+        // Leer el tema
+        printf("Topic: ");
+        for (int j = 0; j < topic_length; j++) {
+            printf("%c", packet.payload[i + 2 + j]);
+        }
+        printf("\n");
+
+        // Mover al siguiente tema
+        i += 2 + topic_length;
+    }
+}
+
 int main() {
     int sockfd, connfd;
     struct sockaddr_in servaddr, cli;
@@ -159,8 +181,25 @@ int main() {
     //MQTT_Packet packet = create_subscribe_packet(encodeMessageToUTF8("EAFIT/Sede/Poblado/Bloque/33/Salon/301/humedad"));
     // Send the packet to the server
     //send_packet_subscribe(sockfd, packet);
-    MQTT_Packet packet = create_publish_packet(encodeMessageToUTF8("America/Educacion/Colombia/Antioquia/AreaMetropolitana/Universidades/Pregrado/EAFIT/Sede/Pereira/Bloque/18/Aula/101/Microcontroladores/Sensores/Clima/Humedad"), encodeMessageToUTF8("28%"));
-    send_packet_to_server(sockfd, packet);
+    //MQTT_Packet packet = create_publish_packet(encodeMessageToUTF8("America/Educacion/Colombia/Antioquia/AreaMetropolitana/Universidades/Pregrado/EAFIT/Sede/Pereira/Bloque/18/Aula/101/Microcontroladores/Sensores/Clima/Humedad"), encodeMessageToUTF8("28%"));
+    //send_packet_to_server(sockfd, packet);
+
+    const char *topics[] = {
+        "a/b",
+        "EAFIT/Sede/Poblado",
+        "EAFIT/Sede/Bogota",
+        "EAFIT/Sede/Poblado/Postgrados",
+        "UdeA/Sede/PaloQuemado",
+        "Nacho/Sede/Minas",
+        "c/d",
+        "Colombia/Antioquia/ValleDeAburra",
+        "Colombia/Antioquia/ValleDeAburra/Itagui",
+        "Mundo/Guerras"
+    };
+
+    MQTT_Packet packet = create_subscribe_packet(topics);
+    printf("Paquete SUBSCRIBE:\n");
+    print_mqtt_packet(packet);
 
     // Close the socket
     close(sockfd);
