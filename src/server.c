@@ -200,6 +200,8 @@ int main(int argc, char *argv[]) {
     } 
     else
         printf("Socket successfully created..\n"); 
+
+    printf("Number socket: %d" ,sockfd);
     
     bzero(&servaddr, sizeof(servaddr));
     servaddr.sin_family = AF_INET; 
