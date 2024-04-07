@@ -316,6 +316,13 @@ void publish(TreeNode *root, const char *topic, const char *message) {
     }
     current_node->messages[current_node->num_messages] = strdup(message);
     current_node->num_messages++;
+    /*
+    if (current_node->users != NULL) {
+        for (int i = 0; i < current_node->num_users; i++) {
+            write(current_node->users[i], buff, sizeof(buff));  
+        }
+    }
+    */
 
     free(topic_copy);
 }
