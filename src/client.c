@@ -109,10 +109,12 @@ void send_packet_to_server(int sockfd, MQTT_Packet packet) {
 }
 
 void print_mqtt_packet(MQTT_Packet packet) {
+    printf("Handle... \n");
     printf("Fixed Header: 0x%02X\n", packet.fixed_header);
     printf("Remaining Length: %d\n", packet.remaining_length);
     printf("Variable Header: 0x%02X 0x%02X\n", packet.variable_header[0], packet.variable_header[1]);
     printf("Payload:\n");
+    
     for (int i = 0; i < packet.remaining_length; ) {
         // Leer longitud del tema
         int topic_length = (packet.payload[i] << 8) | packet.payload[i + 1];
@@ -120,14 +122,60 @@ void print_mqtt_packet(MQTT_Packet packet) {
 
         // Leer el tema
         printf("Topic: ");
+        char *topic = malloc(topic_length);
         for (int j = 0; j < topic_length; j++) {
-            printf("%c", packet.payload[i + 2 + j]);
+            topic[j] = packet.payload[i + 2 + j];
         }
+        printf("Topic: %s\n", topic);
         printf("\n");
 
         // Mover al siguiente tema
         i += 2 + topic_length;
     }
+}
+
+int send_mqtt_packet(int sockfd, MQTT_Packet packet) {
+    // Calcular la longitud total del paquete
+    size_t total_length = 1 + 1 + packet.remaining_length;
+    if (packet.payload != NULL) {
+        total_length += strlen((char*)packet.payload);
+    }
+
+    // Crear un buffer para enviar el paquete completo
+    uint8_t* buffer = malloc(total_length);
+    if (buffer == NULL) {
+        perror("Error al asignar memoria");
+        return -1;
+    }
+
+    // Copiar el encabezado fijo y la longitud restante al buffer
+    buffer[0] = packet.fixed_header;
+    buffer[1] = packet.remaining_length;
+
+    // Copiar el encabezado variable al buffer
+    memcpy(buffer + 2, packet.variable_header, packet.remaining_length);
+
+    // Copiar el payload al buffer (si existe)
+    if (packet.payload != NULL) {
+        memcpy(buffer + 2, packet.payload, packet.remaining_length);
+    }
+
+    // Enviar el paquete completo a través del socket
+    ssize_t bytes_sent = send(sockfd, buffer, total_length, 0);
+    printf("Contenido del buffer:\n");
+    for (size_t i = 0; i < total_length; i++) {
+        printf("%02x ", buffer[i]);
+    }
+    printf("\n");
+
+    if (bytes_sent < 0) {
+        perror("Error al enviar el paquete");
+        free(buffer);
+        return -1;
+    }
+
+    free(buffer);
+    return 0;
 }
 
 int main() {
@@ -177,30 +225,32 @@ int main() {
         printf("connected to the server..\n");
 
     //MQTT_Packet packet = create_connect_packet(0, "01");
-    //send_packet_connect(sockfd, packet);
-    //MQTT_Packet packet = create_subscribe_packet(encodeMessageToUTF8("EAFIT/Sede/Poblado/Bloque/33/Salon/301/humedad"));
+    // send_packet_connect(sockfd, packet);
+    // MQTT_Packet packet = create_subscribe_packet(encodeMessageToUTF8("EAFIT/Sede/Poblado/Bloque/33/Salon/301/humedad"));
     // Send the packet to the server
-    //send_packet_subscribe(sockfd, packet);
-    //MQTT_Packet packet = create_publish_packet(encodeMessageToUTF8("America/Educacion/Colombia/Antioquia/AreaMetropolitana/Universidades/Pregrado/EAFIT/Sede/Pereira/Bloque/18/Aula/101/Microcontroladores/Sensores/Clima/Humedad"), encodeMessageToUTF8("28%"));
+    // send_packet_subscribe(sockfd, packet);
+    //MQTT_Packet packet = create_publish_packet(encodeMessageToUTF8("America/Educacion/Colombia/Antioquia/AreaMetropolitana/Universidades/Pregrado/EAFIT/Sede/Poblado/Bloque/18/Aula/304/Microcontroladores/Sensores/Clima/Humedad"), encodeMessageToUTF8("20%"));
     //send_packet_to_server(sockfd, packet);
 
     const char *topics[] = {
         "a/b",
-        "EAFIT/Sede/Poblado",
-        "EAFIT/Sede/Bogota",
-        "EAFIT/Sede/Poblado/Postgrados",
-        "UdeA/Sede/PaloQuemado",
-        "Nacho/Sede/Minas",
-        "c/d",
-        "Colombia/Antioquia/ValleDeAburra",
-        "Colombia/Antioquia/ValleDeAburra/Itagui",
-        "Mundo/Guerras"
+        "EAFIT/Poblado/Bloque/18",
+        "Nacho/Minas/Bloque/1",
+        "UdeA/Principal/Bloque/5",
+        "America/Educacion/Colombia/Antioquia/AreaMetropolitana/Universidades/Pregrado/EAFIT/Sede/Poblado/Bloque/19/Aula/416/Microcontroladores/Sensores/Clima/Temperatura",
+        NULL
     };
 
     MQTT_Packet packet = create_subscribe_packet(topics);
-    printf("Paquete SUBSCRIBE:\n");
     print_mqtt_packet(packet);
+    send_mqtt_packet(sockfd, packet);
+    size_t total_size = sizeof(MQTT_Packet);
 
+    // Tamaño de los datos a los que apuntan los punteros
+    total_size += strlen((char*)packet.variable_header);
+    total_size += strlen((char*)packet.payload);
+
+    printf("Tamaño total de MQTT_Packet: %zu\n", total_size);
     // Close the socket
     close(sockfd);
   

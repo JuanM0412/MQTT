@@ -6,3 +6,4 @@ s.c
 test.c
 command.txt
 **/tree/*
+debug.c

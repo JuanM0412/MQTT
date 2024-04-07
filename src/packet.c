@@ -82,38 +82,42 @@ MQTT_Packet create_subscribe_packet(const char** topics_to_subscribe) {
     int num_topics = 0;
     int payload_length = 0;
 
-    // Calcular el número de temas y la longitud total del payload
+    // Calculate the number of topics and total payload length
     while (topics_to_subscribe[num_topics] != NULL) {
         payload_length += strlen(topics_to_subscribe[num_topics]);
         num_topics++;
     }
 
-    // Calcular el tamaño total del paquete
-    size_t packet_size = 2 + payload_length + (num_topics * 2); // 2 bytes para cada longitud de tema
+    // Calculate total packet size
+    size_t packet_size = 2 + payload_length + (num_topics * 2); // 2 bytes for each topic length
 
-    // Asignar memoria para el paquete
+    // Allocate memory for the packet
     subscribe_packet.variable_header = malloc(2);
     subscribe_packet.payload = malloc(packet_size);
 
-    // Llenar el encabezado fijo del paquete
-    subscribe_packet.fixed_header = MQTT_FIXED_HEADER_SUBSCRIBE;
-    subscribe_packet.remaining_length = packet_size - 2; // -2 porque no incluimos fixed_header ni remaining_length en el tamaño
+    if (subscribe_packet.variable_header == NULL || subscribe_packet.payload == NULL) {
+        exit(EXIT_FAILURE);
+    }
 
-    // ID del mensaje (cualquier valor válido)
+    // Fill in the fixed header of the packet
+    subscribe_packet.fixed_header = MQTT_FIXED_HEADER_SUBSCRIBE; // MQTT subscribe packet
+    subscribe_packet.remaining_length = packet_size - 2; // -2 because we don't include fixed_header and remaining_length in size
+
+    // Message ID (any valid value)
     subscribe_packet.variable_header[0] = 0x00; // MSB
     subscribe_packet.variable_header[1] = 0x0A; // LSB
 
-    // Copiar los temas al payload
+    // Copy topics into the payload
     int offset = 0;
     for (int i = 0; i < num_topics; i++) {
         const char *topic = topics_to_subscribe[i];
         size_t topic_length = strlen(topic);
 
-        // Copiar la longitud del tema (MSB y LSB)
+        // Copy topic length (MSB and LSB)
         subscribe_packet.payload[offset++] = (topic_length >> 8) & 0xFF;
         subscribe_packet.payload[offset++] = topic_length & 0xFF;
 
-        // Copiar el tema
+        // Copy topic
         memcpy(subscribe_packet.payload + offset, topic, topic_length);
         offset += topic_length;
     }

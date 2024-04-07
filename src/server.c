@@ -14,6 +14,7 @@
 #include "../include/tree.h"
 #include "../include/server.h"
 
+// Function to get the singleton tree instance
 Tree* get_tree() {
     static Tree singleton;
     static int initialized = 0;
@@ -27,6 +28,7 @@ Tree* get_tree() {
     return &singleton;
 }
 
+// Function to handle the tree based on the received topic and message
 void handle_tree(int request, const char *topic, const char *message) {
     Tree *singleton_tree = get_tree();
 
@@ -38,15 +40,40 @@ void handle_tree(int request, const char *topic, const char *message) {
     pthread_mutex_unlock(&singleton_tree->mutex);
 }
 
+// Function to disconnect a client
 void disconnect_client(int connfd) {
     close(connfd);
+    printf("Connection closed.");
 }
 
+// Function to handle the subscribe packet
+void handle_subscribe_packet(MQTT_Packet packet, int connfd) {
+    for (int i = 0; i < packet.remaining_length; ) {
+        // Read topic length
+        int topic_length = (packet.payload[i] << 8) | packet.payload[i + 1];
+
+        // Read topic
+        char *topic = malloc(topic_length);
+        for (int j = 0; j < topic_length; j++) {
+            topic[j] = packet.payload[i + 2 + j];
+        }
+        printf("Topic: %s\n", topic);
+        free(topic);
+        printf("\n");
+
+        // Move to the next topic
+        i += 2 + topic_length;
+    }
+
+    disconnect_client(connfd);
+}
+
+// Function to handle the publish packet
 void handle_publish_packet(MQTT_Packet packet, int connfd) {
     size_t topic_length = (packet.variable_header[0] << 8) | packet.variable_header[1];
     size_t payload_length = packet.remaining_length - topic_length;
-    printf("Longitud del tópico: %zu\n", topic_length);
-    printf("Longitud del payload: %zu\n", payload_length);
+    printf("Topic length: %zu\n", topic_length);
+    printf("Payload length: %zu\n", payload_length);
 
     size_t total_length = packet.remaining_length + strlen(packet.payload);
     unsigned char *serialized_packet = malloc(total_length);
@@ -66,6 +93,7 @@ void handle_publish_packet(MQTT_Packet packet, int connfd) {
     disconnect_client(connfd);
 }
 
+// Function to handle the connect packet
 void handle_connect_packet(MQTT_Packet packet, int connfd) {
     size_t expected_length = 10 + (packet.variable_header[10] << 8) + packet.variable_header[11];
 
@@ -82,15 +110,19 @@ void handle_connect_packet(MQTT_Packet packet, int connfd) {
     disconnect_client(connfd);
 }
 
+// Function to identify the packet type and handle it accordingly
 void identify_packet(MQTT_Packet packet, int connfd) {
     if (packet.fixed_header == MQTT_FIXED_HEADER_CONNECT)
         handle_connect_packet(packet, connfd);
     else if (packet.fixed_header == MQTT_FIXED_HEADER_PUBLISH)
         handle_publish_packet(packet, connfd);
+    else if (packet.fixed_header == MQTT_FIXED_HEADER_SUBSCRIBE)
+        handle_subscribe_packet(packet, connfd);
     else
         disconnect_client(connfd);
 }
 
+// Function to receive packet from client
 MQTT_Packet receive_packet_from_client(int connfd) {
     MQTT_Packet received_packet;
 
@@ -116,60 +148,21 @@ MQTT_Packet receive_packet_from_client(int connfd) {
 
     // Calculate payload size
     size_t payload_size = bytes_received - offset;
-    received_packet.payload = malloc(payload_size);
-    memcpy(received_packet.payload, buffer + offset, payload_size);
+    if (received_packet.fixed_header == MQTT_FIXED_HEADER_SUBSCRIBE) {
+        received_packet.payload = malloc(received_packet.remaining_length);
+        memcpy(received_packet.payload, buffer + 2, received_packet.remaining_length);
+    } else {
+        received_packet.payload = malloc(payload_size);
+        memcpy(received_packet.payload, buffer + offset, payload_size);
+    }
 
     return received_packet;
 }
 
-// Function designed for chat between client and server
+// Function to process connection in a separate thread
 void *process_connection(void *arg) { 
     int connfd = *((int*)arg);
     MQTT_Packet received_packet = receive_packet_from_client(connfd);
-
-    identify_packet(received_packet, connfd);
-
-    printf("Variable Header: ");
-    for (int i = 0; i < received_packet.remaining_length; i++) {
-        printf("%02X ", received_packet.variable_header[i]);
-    }
-    printf("\n");
-
-    printf("Payload: ");
-    for (int i = 0; i < received_packet.remaining_length; i++) {
-        printf("%02X ", received_packet.payload[i]);
-    }
-    printf("\n");
-
-    printf("Fixed Header: %02X\n", received_packet.fixed_header);
-
-    // Concatenate variable header and payload into a single buffer
-    size_t total_length = received_packet.remaining_length + strlen(received_packet.payload);
-    unsigned char *serialized_packet = malloc(total_length);
-    memcpy(serialized_packet, received_packet.variable_header, received_packet.remaining_length);
-    memcpy(serialized_packet + received_packet.remaining_length, received_packet.payload, strlen(received_packet.payload));
-
-    // Print serialized packet
-    printf("Serialized packet: ");
-    for (int i = 0; i < total_length; ++i) {
-        printf("%02X ", serialized_packet[i]);
-    }
-    printf("\n");
-
-    // Decode topic encoded in UTF-8
-    unsigned int topic_length = (received_packet.variable_header[0] << 8) | received_packet.variable_header[1];
-    char *decoded_topic = decodeUTF8(serialized_packet + 2); // Ignore variable header
-    printf("Decoded topic: %s\n", decoded_topic);
-
-    // Decode message encoded in UTF-8 (ignoring variable header)
-    char *decoded_message = decodeUTF8(serialized_packet + received_packet.remaining_length); // Ignore variable header
-    printf("Decoded message: %s\n", decoded_message);
-
-    // Concatenate topic and message using strcat
-    char *topic_message = malloc(strlen(decoded_topic) + strlen(decoded_message) + 2); // +2 for space and null terminator
-    strcpy(topic_message, decoded_topic);
-    strcat(topic_message, " ");
-    strcat(topic_message, decoded_message);
 
     // Free memory
     free_packet(&received_packet);
@@ -185,20 +178,18 @@ int main(int argc, char *argv[]) {
     int port;
 
     if (argc == 4) {
-		strcpy(ip, argv[1]);
-		port = atoi(argv[2]);
-		strcpy(log_path, argv[3]);
-	}
-	else
-		return 1;
+        strcpy(ip, argv[1]);
+        port = atoi(argv[2]);
+        strcpy(log_path, argv[3]);
+    } else
+        return 1;
 
     // Create socket
     sockfd = socket(AF_INET, SOCK_STREAM, 0); 
     if (sockfd == -1) { 
         printf("socket creation failed...\n"); 
         exit(0); 
-    } 
-    else
+    } else
         printf("Socket successfully created..\n"); 
     
     bzero(&servaddr, sizeof(servaddr));
@@ -210,16 +201,14 @@ int main(int argc, char *argv[]) {
     if ((bind(sockfd, (SA*)&servaddr, sizeof(servaddr))) != 0) { 
         printf("socket bind failed...\n"); 
         exit(0); 
-    } 
-    else
+    } else
         printf("Socket successfully binded..\n"); 
 
     // Listen for incoming connections
     if ((listen(sockfd, 5)) != 0) { 
         printf("Listen failed...\n"); 
         exit(0); 
-    } 
-    else
+    } else
         printf("Server listening..\n"); 
 
     len = sizeof(cli); 
@@ -230,8 +219,7 @@ int main(int argc, char *argv[]) {
         if (connfd < 0) { 
             printf("server accept failed...\n"); 
             exit(0); 
-        } 
-        else
+        } else
             printf("server accept the client...\n"); 
         
         pthread_t tid;
