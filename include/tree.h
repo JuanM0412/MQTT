@@ -11,24 +11,6 @@ typedef struct TreeNode {
     int num_users;
 } TreeNode;
 
-typedef struct QueueNode {
-    TreeNode *data;
-    struct QueueNode *next;
-} QueueNode;
-
-typedef struct {
-    QueueNode *front;
-    QueueNode *rear;
-} Queue;
-
-QueueNode *createQueueNode(TreeNode *data);
-Queue *createQueue();
-int isEmpty(Queue *queue);
-void enqueue(Queue *queue, TreeNode *data);
-TreeNode *dequeue(Queue *queue);
-void freeQueue(Queue *queue);
-
-
 TreeNode* createTreeNode(const char *name);
 void subscribeAllAdjacent(TreeNode *node, int user);
 void freeTreeNode(TreeNode *node);

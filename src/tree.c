@@ -1,68 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "tree.h"
-
-// Definition of the methods for the queue-type data structure
-
-QueueNode *createQueueNode(TreeNode *data) {
-    QueueNode *newNode = (QueueNode *)malloc(sizeof(QueueNode));
-    if (newNode) {
-        newNode->data = data;
-        newNode->next = NULL;
-    }
-    return newNode;
-}
-
-Queue *createQueue() {
-    Queue *queue = (Queue *)malloc(sizeof(Queue));
-    if (queue) {
-        queue->front = queue->rear = NULL;
-    }
-    return queue;
-}
-
-int isEmpty(Queue *queue) {
-    return queue->front == NULL;
-}
-
-void enqueue(Queue *queue, TreeNode *data) {
-    QueueNode *newNode = createQueueNode(data);
-    if (newNode) {
-        if (isEmpty(queue)) {
-            queue->front = queue->rear = newNode;
-        } else {
-            queue->rear->next = newNode;
-            queue->rear = newNode;
-        }
-    }
-}
-
-TreeNode *dequeue(Queue *queue) {
-    if (isEmpty(queue)) {
-        return NULL;
-    }
-    QueueNode *temp = queue->front;
-    TreeNode *data = temp->data;
-    queue->front = queue->front->next;
-    if (queue->front == NULL) {
-        queue->rear = NULL;
-    }
-    free(temp);
-    return data;
-}
-
-void freeQueue(Queue *queue) {
-    while (!isEmpty(queue)) {
-        dequeue(queue);
-    }
-    free(queue);
-}
-
+#include "../include/tree.h"
+#include "../include/queue.h"
 
 //This function get a Topic, and when match a "+"
 //returns the subtopic after the appearance of the wildcard.
-
 char* getSubtopic(const char* str) {
     char* substr = strstr(str, "+");
     if (substr != NULL) {
@@ -74,7 +17,6 @@ char* getSubtopic(const char* str) {
 
 //This function creates a new node for the tree
 //and returns it
-
 TreeNode* createTreeNode(const char *name) {
     TreeNode *new_node = (TreeNode*)malloc(sizeof(TreeNode));
     if (new_node == NULL) {
@@ -94,7 +36,6 @@ TreeNode* createTreeNode(const char *name) {
 }
 
 //This function frees the memory of the tree
-
 void freeTreeNode(TreeNode *node) {
     if (node == NULL) return;
 
@@ -115,7 +56,6 @@ void freeTreeNode(TreeNode *node) {
 }
 
 //This function print in the console the structure of the tree
-
 void printTree(TreeNode *node, int depth) {
     if (node == NULL) {
         return;
@@ -156,7 +96,6 @@ void printTree(TreeNode *node, int depth) {
 //The parameter user, is the ID of the socket associated to the user.
 //The parameter wildcard_flag show if any wildcard of type "+" has been found. 
 //On the first call to the function it starts at zero
-
 void subscribe(TreeNode *root, const char *topic, int user, int wildcard_flag) {
     char *topic_copy = strdup(topic);
     char *token = strtok(topic_copy, "/");
@@ -198,7 +137,6 @@ void subscribe(TreeNode *root, const char *topic, int user, int wildcard_flag) {
         }
 
         //Validates if the element of the topic is a multiple-level wildcard 
-
         if (strcmp(token, "#") == 0) {
             //The "#" only should be in the last element of the topic.
             if (strtok(NULL, "/") != NULL) {
@@ -207,12 +145,12 @@ void subscribe(TreeNode *root, const char *topic, int user, int wildcard_flag) {
                 return;
             }
 
-            Queue *cola = createQueue();
-            enqueue(cola, current_node);
+            Queue *queue = createQueue();
+            enqueue(queue, current_node);
 
             // Use a BFS in order tu subscribe the user in all the adjacent topics
-            while (!isEmpty(cola)) {
-                TreeNode *node = dequeue(cola);
+            while (!isEmpty(queue)) {
+                TreeNode *node = dequeue(queue);
 
                 if (node->users == NULL) {
                     node->users = (int *)malloc(sizeof(int));
@@ -223,11 +161,11 @@ void subscribe(TreeNode *root, const char *topic, int user, int wildcard_flag) {
                 node->num_users++;
 
                 for (int i = 0; i < node->num_children; i++) {
-                    enqueue(cola, node->children[i]);
+                    enqueue(queue, node->children[i]);
                 }
             }
 
-            freeQueue(cola);
+            freeQueue(queue);
             break;        
         } 
 
@@ -282,7 +220,6 @@ void subscribe(TreeNode *root, const char *topic, int user, int wildcard_flag) {
 }
 
 //This function handles PUB requests for the tree
-
 void publish(TreeNode *root, const char *topic, const char *message) {
     char *topic_copy = strdup(topic);
     char *token = strtok(topic_copy, "/");
