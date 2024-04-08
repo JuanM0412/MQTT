@@ -40,6 +40,17 @@ void handle_tree(int request, const char *topic, const char *message) {
     pthread_mutex_unlock(&singleton_tree->mutex);
 }
 
+void insert_subscribe(const char *topic, int connfd) {
+    Tree *singleton_tree = get_tree();
+
+    pthread_mutex_lock(&singleton_tree->mutex);
+
+    subscribe(singleton_tree->tree, topic, connfd, 0);
+    printTree(singleton_tree->tree, 0);
+
+    pthread_mutex_unlock(&singleton_tree->mutex);
+}
+
 // Function to disconnect a client
 void disconnect_client(int connfd) {
     close(connfd);
@@ -57,7 +68,8 @@ void handle_subscribe_packet(MQTT_Packet packet, int connfd) {
         for (int j = 0; j < topic_length; j++) {
             topic[j] = packet.payload[i + 2 + j];
         }
-        printf("Topic: %s\n", topic);
+        printf("Topic: %s\n", decodeUTF8(topic));
+        insert_subscribe(topic, connfd);
         free(topic);
         printf("\n");
 
@@ -81,6 +93,7 @@ void handle_publish_packet(MQTT_Packet packet, int connfd) {
     memcpy(serialized_packet + packet.remaining_length, packet.payload, strlen(packet.payload));
     char *decoded_topic = decodeUTF8(serialized_packet + 2);
     char *decoded_message = decodeUTF8(serialized_packet + packet.remaining_length);
+    printf("Topico descodificado: %s\n", decoded_topic);
 
     for (int i = 0; i <= topic_length; i++) {
         if (decoded_topic[i] == '+' || decoded_topic[i] == '#') {
@@ -112,6 +125,7 @@ void handle_connect_packet(MQTT_Packet packet, int connfd) {
 
 // Function to identify the packet type and handle it accordingly
 void identify_packet(MQTT_Packet packet, int connfd) {
+    printf("identify_packet");
     if (packet.fixed_header == MQTT_FIXED_HEADER_CONNECT)
         handle_connect_packet(packet, connfd);
     else if (packet.fixed_header == MQTT_FIXED_HEADER_PUBLISH)
@@ -124,6 +138,7 @@ void identify_packet(MQTT_Packet packet, int connfd) {
 
 // Function to receive packet from client
 MQTT_Packet receive_packet_from_client(int connfd) {
+    printf("receive_packet_from_client");
     MQTT_Packet received_packet;
 
     // Read data from socket
@@ -160,9 +175,10 @@ MQTT_Packet receive_packet_from_client(int connfd) {
 }
 
 // Function to process connection in a separate thread
-void *process_connection(void *arg) { 
+void *process_connection(void *arg) {
     int connfd = *((int*)arg);
     MQTT_Packet received_packet = receive_packet_from_client(connfd);
+    identify_packet(received_packet, connfd);
 
     // Free memory
     free_packet(&received_packet);
@@ -191,8 +207,6 @@ int main(int argc, char *argv[]) {
         exit(0); 
     } else
         printf("Socket successfully created..\n"); 
-
-    printf("Number socket: %d" ,sockfd);
     
     bzero(&servaddr, sizeof(servaddr));
     servaddr.sin_family = AF_INET; 

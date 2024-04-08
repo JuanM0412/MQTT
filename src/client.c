@@ -229,28 +229,18 @@ int main() {
     // MQTT_Packet packet = create_subscribe_packet(encodeMessageToUTF8("EAFIT/Sede/Poblado/Bloque/33/Salon/301/humedad"));
     // Send the packet to the server
     // send_packet_subscribe(sockfd, packet);
-    //MQTT_Packet packet = create_publish_packet(encodeMessageToUTF8("America/Educacion/Colombia/Antioquia/AreaMetropolitana/Universidades/Pregrado/EAFIT/Sede/Poblado/Bloque/18/Aula/304/Microcontroladores/Sensores/Clima/Humedad"), encodeMessageToUTF8("20%"));
-    //send_packet_to_server(sockfd, packet);
+    // MQTT_Packet packet = create_publish_packet(encodeMessageToUTF8("America/Educacion/Colombia/Antioquia/AreaMetropolitana/Universidades/Pregrado/EAFIT/Sede/Poblado/Bloque/18/Aula/304/Microcontroladores/Sensores/Clima/Temperatura"), encodeMessageToUTF8("19"));
+    // send_packet_to_server(sockfd, packet);
 
     const char *topics[] = {
-        "a/b",
-        "EAFIT/Poblado/Bloque/18",
-        "Nacho/Minas/Bloque/1",
-        "UdeA/Principal/Bloque/5",
-        "America/Educacion/Colombia/Antioquia/AreaMetropolitana/Universidades/Pregrado/EAFIT/Sede/Poblado/Bloque/19/Aula/416/Microcontroladores/Sensores/Clima/Temperatura",
+        encodeMessageToUTF8("America/Educacion/Colombia/Antioquia/AreaMetropolitana/Universidades/Pregrado/EAFIT/Sede/Poblado/Bloque/18/Aula/304/Microcontroladores/Sensores/Clima/Temperatura18"),
         NULL
     };
 
     MQTT_Packet packet = create_subscribe_packet(topics);
     print_mqtt_packet(packet);
-    send_mqtt_packet(sockfd, packet);
-    size_t total_size = sizeof(MQTT_Packet);
+    // send_mqtt_packet(sockfd, packet);
 
-    // Tamaño de los datos a los que apuntan los punteros
-    total_size += strlen((char*)packet.variable_header);
-    total_size += strlen((char*)packet.payload);
-
-    printf("Tamaño total de MQTT_Packet: %zu\n", total_size);
     // Close the socket
     close(sockfd);
   
