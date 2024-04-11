@@ -1,6 +1,13 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <stdio.h> 
+#include <netdb.h> 
+#include <netinet/in.h> 
+#include <stdlib.h> 
+#include <string.h> 
+#include <sys/socket.h> 
+#include <sys/types.h> 
+#include <unistd.h>
+#include <pthread.h>
+#include <arpa/inet.h>
 #include "../include/tree.h"
 #include "../include/queue.h"
 
@@ -253,13 +260,14 @@ void publish(TreeNode *root, const char *topic, const char *message) {
     }
     current_node->messages[current_node->num_messages] = strdup(message);
     current_node->num_messages++;
-    /*
+    
     if (current_node->users != NULL) {
         for (int i = 0; i < current_node->num_users; i++) {
-            write(current_node->users[i], buff, sizeof(buff));  
+            for (int j = 0; j < current_node->num_messages; j++) {
+                write(current_node->users[i], current_node->messages[i], sizeof(current_node->messages[i])); 
+            } 
         }
     }
-    */
 
     free(topic_copy);
 }

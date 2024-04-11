@@ -77,12 +77,15 @@ void send_packet_subscribe(int sockfd, MQTT_Packet packet) {
     write(sockfd, buffer, total_size);
 }
 
-void send_packet_to_server(int sockfd, MQTT_Packet packet) {
+void send_publish_to_server(int sockfd, MQTT_Packet packet) {
     printf("Fixed Header: %u\n", packet.fixed_header);
     printf("Remaining Length: %u\n", packet.remaining_length);
+    
     // Calculate total size of the packet
-    size_t total_size = sizeof(packet.fixed_header) + sizeof(packet.remaining_length) +
-                        packet.remaining_length + sizeof(packet.payload);
+    size_t total_size = sizeof(packet.fixed_header) + packet.remaining_length + 1;
+    printf("Total size %zu\n", total_size);
+    
+    size_t topic_length;
 
     // Serialize structure data into a byte buffer
     unsigned char buffer[total_size];
@@ -90,18 +93,43 @@ void send_packet_to_server(int sockfd, MQTT_Packet packet) {
 
     // Copy structure fields into buffer
     memcpy(buffer + offset, &packet.fixed_header, sizeof(packet.fixed_header));
-    offset += sizeof(packet.fixed_header);
+    offset += 1;
+    printf("Offset (1) -> %zu\n", offset);
 
     memcpy(buffer + offset, &packet.remaining_length, sizeof(packet.remaining_length));
-    offset += sizeof(packet.remaining_length);
+    offset += 1;
+    printf("Offset (2) -> %zu\n", offset);
 
-    memcpy(buffer + offset, packet.variable_header, packet.remaining_length);
-    offset += packet.remaining_length;
+    topic_length = (packet.variable_header[0] << 8) | packet.variable_header[1];
+    printf("Topic len -> %zu\n", topic_length);
+    memcpy(buffer + offset, &packet.variable_header[0], 1);
+    offset += 1;
+    printf("Offset (3) -> %zu\n", offset);
+    memcpy(buffer + offset, &packet.variable_header[1], 1);
+    offset += 1;
+    memcpy(buffer + offset, packet.variable_header + 2, topic_length);
+    printf("Offset (4) -> %zu\n", offset);
+    offset += topic_length;
+    printf("Offset (5) -> %zu\n", offset);
 
-    memcpy(buffer + offset, packet.payload, sizeof(packet.payload));
+    memcpy(buffer + offset, &packet.variable_header[topic_length + 2], 2);
+    offset += 2;
+    printf("Offset (6) -> %zu\n", offset);
+
+    for (int i = 0; i < packet.remaining_length - (topic_length + 4); i++) {
+        buffer[offset + i] = packet.payload[i];
+        printf("buffer[offset + i] = %02x ", buffer[offset + i]);
+        printf("payload[i] = %02x ", packet.payload[i]);
+    }
 
     // Send the buffer through the socket
     write(sockfd, buffer, total_size);
+
+    printf("Contenido del buffer:\n");
+    for (size_t i = 0; i < total_size; i++) {
+        printf("%02x ", buffer[i]);
+    }
+    printf("\n");
 
     while(1){
         ;;
@@ -136,13 +164,10 @@ void print_mqtt_packet(MQTT_Packet packet) {
 
 int send_mqtt_packet(int sockfd, MQTT_Packet packet) {
     // Calcular la longitud total del paquete
-    size_t total_length = 1 + 1 + packet.remaining_length;
-    if (packet.payload != NULL) {
-        total_length += strlen((char*)packet.payload);
-    }
+    size_t total_length = 2 + packet.remaining_length;
 
     // Crear un buffer para enviar el paquete completo
-    uint8_t* buffer = malloc(total_length);
+    char* buffer = malloc(total_length);
     if (buffer == NULL) {
         perror("Error al asignar memoria");
         return -1;
@@ -153,12 +178,11 @@ int send_mqtt_packet(int sockfd, MQTT_Packet packet) {
     buffer[1] = packet.remaining_length;
 
     // Copiar el encabezado variable al buffer
-    memcpy(buffer + 2, packet.variable_header, packet.remaining_length);
+    memcpy(buffer + 2, &packet.variable_header[0], 1);
+    memcpy(buffer + 3, &packet.variable_header[1], 1);
 
     // Copiar el payload al buffer (si existe)
-    if (packet.payload != NULL) {
-        memcpy(buffer + 2, packet.payload, packet.remaining_length);
-    }
+    memcpy(buffer + 4, packet.payload, packet.remaining_length - 2);
 
     // Enviar el paquete completo a través del socket
     ssize_t bytes_sent = send(sockfd, buffer, total_length, 0);
@@ -176,6 +200,45 @@ int send_mqtt_packet(int sockfd, MQTT_Packet packet) {
 
     free(buffer);
     return 0;
+}
+
+void print_connect_packet(const MQTT_Packet *packet) {
+    printf("Fixed Header: 0x%02X\n", packet->fixed_header);
+    printf("Remaining Length: %d\n", packet->remaining_length);
+
+    printf("Variable Header: ");
+    for (int i = 0; i < packet->remaining_length - 2; i++) { // Resta 2 para los bytes del packet_id
+        printf("%c ", packet->variable_header[i]);
+    }
+    printf("\n");
+
+    printf("Payload: ");
+    for (int i = 0; i < packet->remaining_length - 2; i++) { // Resta 2 para los bytes del packet_id
+        printf("%c ", packet->payload[i]);
+    }
+    printf("\n");
+}
+
+void send_connect_to_server(int sockfd, MQTT_Packet packet) {
+    // Construir el buffer a enviar
+    size_t total_length = 2 + packet.remaining_length;
+    char* buffer = malloc(total_length);
+    buffer[0] = packet.fixed_header;
+    buffer[1] = packet.remaining_length;
+    memcpy(&buffer[2], packet.variable_header, 10);
+    memcpy(&buffer[12], packet.payload, packet.remaining_length - 10);
+
+    // Enviar el paquete al servidor
+    write(sockfd, buffer, total_length);
+
+    printf("Contenido del buffer:\n");
+    for (size_t i = 0; i < total_length; i++) {
+        printf("%02x ", buffer[i]);
+    }
+    printf("\n");
+
+    // Liberar memoria
+    free(buffer);
 }
 
 int main() {
@@ -224,27 +287,36 @@ int main() {
     else
         printf("connected to the server..\n");
 
-    //MQTT_Packet packet = create_connect_packet(0, "01");
-    // send_packet_connect(sockfd, packet);
+    // MQTT_Packet packet = create_connect_packet(1, encodeMessageToUTF8("J01"), encodeMessageToUTF8("Juan123"), encodeMessageToUTF8("12345678"));
+    //print_connect_packet(&packet);
+    // send_connect_to_server(sockfd, packet);
     // MQTT_Packet packet = create_subscribe_packet(encodeMessageToUTF8("EAFIT/Sede/Poblado/Bloque/33/Salon/301/humedad"));
     // Send the packet to the server
     // send_packet_subscribe(sockfd, packet);
-    // MQTT_Packet packet = create_publish_packet(encodeMessageToUTF8("America/Educacion/Colombia/Antioquia/AreaMetropolitana/Universidades/Pregrado/EAFIT/Sede/Poblado/Bloque/18/Aula/304/Microcontroladores/Sensores/Clima/Temperatura"), encodeMessageToUTF8("19"));
-    // send_packet_to_server(sockfd, packet);
+    // MQTT_Packet packet = create_publish_packet(encodeMessageToUTF8("EAFIT/Sede/Poblado/Bloque/33/Salon/301/humedad"), encodeMessageToUTF8("Hijueputa"));
+    // send_publish_to_server(sockfd, packet);
 
     const char *topics[] = {
-        encodeMessageToUTF8("America/Educacion/Colombia/Antioquia/AreaMetropolitana/Universidades/Pregrado/EAFIT/Sede/Poblado/Bloque/18/Aula/304/Microcontroladores/Sensores/Clima/Temperatura18"),
+        encodeMessageToUTF8("a/b/c/d"),
+        encodeMessageToUTF8("Maricona"),
         NULL
     };
 
     MQTT_Packet packet = create_subscribe_packet(topics);
     print_mqtt_packet(packet);
-    // send_mqtt_packet(sockfd, packet);
+    send_mqtt_packet(sockfd, packet);
+    // printf("ENVIADO");
 
     // Close the socket
     close(sockfd);
   
     free_packet(&packet);
+
+    /*for (;;) {
+        char buff[180];
+        if(read(sockfd, buff, sizeof(buff)))
+            printf("From Server : %s", buff);
+    }*/
   
     return 0;
 }
