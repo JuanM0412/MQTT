@@ -268,17 +268,19 @@ int main(int argc, char *argv[]) {
     log_file = fopen(log_path, "a");
     
     while (1) {
+        struct sockaddr_in cli_addr;
+        socklen_t cli_len = sizeof(cli_addr);
+        char client_ip[INET_ADDRSTRLEN];
+
         connfd = accept(sockfd, (SA*)&cli, &len); 
         if (connfd < 0) { 
             printf("server accept failed...\n"); 
             exit(0); 
         } else printf("server accept the client...\n"); 
 
-        char client_ip[INET_ADDRSTRLEN];
-        inet_ntop(AF_INET, &cli.sin_addr, client_ip, INET_ADDRSTRLEN);
-        
-        // Imprime la dirección IP del cliente
+        inet_ntop(AF_INET, &cli_addr.sin_addr, client_ip, INET_ADDRSTRLEN);
         printf("Client IP: %s\n", client_ip);
+
         pthread_t tid;
         pthread_create(&tid, NULL, process_connection, &connfd);
     }
