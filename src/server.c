@@ -164,6 +164,7 @@ MQTT_Packet receive_packet_from_client(int connfd) {
     received_packet.remaining_length = buffer[offset++];
     
     if (received_packet.fixed_header == MQTT_FIXED_HEADER_PUBLISH) {
+        
         // logger("Publish packet recieved from client", serverIP, clientIP);
 
         printf("MQTT_FIXED_HEADER_PUBLISH\n");
@@ -218,16 +219,17 @@ void *process_connection(void *arg) {
 }
 
 FILE *log_file = NULL;
+char serverIP[MAX];
 
 // Main function 
 int main(int argc, char *argv[]) { 
     int sockfd, connfd, len; 
     struct sockaddr_in servaddr, cli; 
-    char ip[MAX], log_path[MAX];
+    char log_path[MAX];
     int port;
 
     if (argc == 4) {
-        strcpy(ip, argv[1]);
+        strcpy(serverIP, argv[1]);
         port = atoi(argv[2]);
         strcpy(log_path, argv[3]);
     } else
@@ -243,7 +245,7 @@ int main(int argc, char *argv[]) {
     
     bzero(&servaddr, sizeof(servaddr));
     servaddr.sin_family = AF_INET; 
-    servaddr.sin_addr.s_addr = inet_addr(ip); 
+    servaddr.sin_addr.s_addr = inet_addr(serverIP); 
     servaddr.sin_port = htons(port); 
 
     // Bind socket to IP and PORT
@@ -270,9 +272,13 @@ int main(int argc, char *argv[]) {
         if (connfd < 0) { 
             printf("server accept failed...\n"); 
             exit(0); 
-        } else
-            printf("server accept the client...\n"); 
+        } else printf("server accept the client...\n"); 
+
+        char client_ip[INET_ADDRSTRLEN];
+        inet_ntop(AF_INET, &cli.sin_addr, client_ip, INET_ADDRSTRLEN);
         
+        // Imprime la dirección IP del cliente
+        printf("Client IP: %s\n", client_ip);
         pthread_t tid;
         pthread_create(&tid, NULL, process_connection, &connfd);
     }

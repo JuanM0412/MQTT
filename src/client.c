@@ -246,7 +246,8 @@ int main() {
     struct sockaddr_in servaddr, cli;
 
     // Read IP and port from configuration file
-    FILE *config_file = fopen(CONFIG_FILE, "r");
+    // FILE *config_file = fopen(CONFIG_FILE, "r");
+    FILE *config_file = fopen("config.txt", "r");
     if (config_file == NULL)
     {
         perror("Error opening config file");
