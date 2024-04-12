@@ -13,43 +13,9 @@
 #include "../include/packet.h"
 #include "../include/tree.h"
 #include "../include/server.h"
-#include "../include/handle_packets.h"
+#include "../include/send_packets_to_client.h"
 #include "../include/utils.h"
-
-Tree* get_tree() {
-    static Tree singleton;
-    static int initialized = 0;
-
-    if (!initialized) {
-        singleton.tree = createTreeNode("/");
-        pthread_mutex_init(&singleton.mutex, NULL);
-        initialized = 1;
-    }
-
-    return &singleton;
-}
-
-void insert_publish(const char *topic, const char *message) {
-    Tree *singleton_tree = get_tree();
-
-    pthread_mutex_lock(&singleton_tree->mutex);
-
-    publish(singleton_tree->tree, topic, message);
-    printTree(singleton_tree->tree, 0);
-
-    pthread_mutex_unlock(&singleton_tree->mutex);
-}
-
-void insert_subscribe(const char *topic, int connfd) {
-    Tree *singleton_tree = get_tree();
-
-    pthread_mutex_lock(&singleton_tree->mutex);
-
-    subscribe(singleton_tree->tree, topic, connfd, 0);
-    printTree(singleton_tree->tree, 0);
-
-    pthread_mutex_unlock(&singleton_tree->mutex);
-}
+#include "../include/handle_tree.h"
 
 void disconnect_client(int connfd) {
     close(connfd);
@@ -214,7 +180,7 @@ void *process_connection(void *arg) {
     printf("Recibido\n");
     identify_packet(received_packet, connfd);
 
-    //free_packet(&received_packet);
+    free_packet(&received_packet);
     
     return NULL;
 }

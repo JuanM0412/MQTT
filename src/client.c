@@ -9,132 +9,10 @@
 #include "../include/encode.h"
 #include "../include/decode.h"
 #include "../include/packet.h"
+#include "../include/send_packets_to_server.h"
 
-#define MAX 80
-#define CONFIG_FILE "../config.txt"
+#define MAX 360
 #define SA struct sockaddr
-
-void send_packet_connect(int sockfd, MQTT_Packet packet) {
-    printf("Fixed Header: %u\n", packet.fixed_header);
-    printf("Remaining Length: %u\n", packet.remaining_length);
-    
-    // Calcular el tamaño total del paquete
-    size_t total_size = 1 + sizeof(packet.remaining_length) +
-                        packet.remaining_length;
-
-    // Crear un búfer para almacenar el paquete MQTT
-    unsigned char buffer[total_size];
-    size_t offset = 0;
-
-    // Copiar el encabezado fijo en el búfer
-    buffer[offset++] = packet.fixed_header;
-
-    // Copiar la longitud restante en el búfer
-    buffer[offset++] = packet.remaining_length;
-
-    // Copiar el encabezado variable en el búfer
-    memcpy(buffer + offset, packet.variable_header, packet.remaining_length);
-    offset += packet.remaining_length;
-
-    // Enviar el paquete a través del socket
-    ssize_t bytes_sent = send(sockfd, buffer, total_size, 0);
-    if (bytes_sent < 0) {
-        perror("Error sending packet to server");
-        exit(EXIT_FAILURE);
-    } else if (bytes_sent != total_size) {
-        fprintf(stderr, "Incomplete packet sent to server\n");
-        exit(EXIT_FAILURE);
-    } else {
-        printf("Packet sent successfully\n");
-    }
-}
-
-void send_packet_subscribe(int sockfd, MQTT_Packet packet) {
-    printf("Fixed Header: %u\n", packet.fixed_header);
-    printf("Remaining Length: %u\n", packet.remaining_length);
-
-    // Calculate total size of the packet
-    size_t total_size = sizeof(packet.fixed_header) + sizeof(packet.remaining_length) +
-                        packet.remaining_length + sizeof(packet.payload);
-
-    // Serialize structure data into a byte buffer
-    unsigned char buffer[total_size];
-    size_t offset = 0;
-
-    // Copy structure fields into buffer
-    memcpy(buffer + offset, &packet.fixed_header, sizeof(packet.fixed_header));
-    offset += sizeof(packet.fixed_header);
-
-    memcpy(buffer + offset, &packet.remaining_length, sizeof(packet.remaining_length));
-    offset += sizeof(packet.remaining_length);
-
-    memcpy(buffer + offset, packet.variable_header, packet.remaining_length);
-    offset += packet.remaining_length;
-
-    memcpy(buffer + offset, packet.payload, sizeof(packet.payload));
-
-    // Send the buffer through the socket
-    write(sockfd, buffer, total_size);
-}
-
-void send_publish_to_server(int sockfd, MQTT_Packet packet) {
-    printf("Fixed Header: %u\n", packet.fixed_header);
-    printf("Remaining Length: %u\n", packet.remaining_length);
-    
-    // Calculate total size of the packet
-    size_t total_size = sizeof(packet.fixed_header) + packet.remaining_length + 1;
-    printf("Total size %zu\n", total_size);
-    
-    size_t topic_length;
-
-    // Serialize structure data into a byte buffer
-    unsigned char buffer[total_size];
-    size_t offset = 0;
-
-    // Copy structure fields into buffer
-    memcpy(buffer + offset, &packet.fixed_header, sizeof(packet.fixed_header));
-    offset += 1;
-    printf("Offset (1) -> %zu\n", offset);
-
-    memcpy(buffer + offset, &packet.remaining_length, sizeof(packet.remaining_length));
-    offset += 1;
-    printf("Offset (2) -> %zu\n", offset);
-
-    topic_length = (packet.variable_header[0] << 8) | packet.variable_header[1];
-    printf("Topic len -> %zu\n", topic_length);
-    memcpy(buffer + offset, &packet.variable_header[0], 1);
-    offset += 1;
-    printf("Offset (3) -> %zu\n", offset);
-    memcpy(buffer + offset, &packet.variable_header[1], 1);
-    offset += 1;
-    memcpy(buffer + offset, packet.variable_header + 2, topic_length);
-    printf("Offset (4) -> %zu\n", offset);
-    offset += topic_length;
-    printf("Offset (5) -> %zu\n", offset);
-
-    memcpy(buffer + offset, &packet.variable_header[topic_length + 2], 2);
-    offset += 2;
-    printf("Offset (6) -> %zu\n", offset);
-
-    for (int i = 0; i < packet.remaining_length - (topic_length + 4); i++) {
-        buffer[offset + i] = packet.payload[i];
-        printf("buffer[offset + i] = %02x ", buffer[offset + i]);
-        printf("payload[i] = %02x ", packet.payload[i]);
-    }
-
-    // Send the buffer through the socket
-    write(sockfd, buffer, total_size);
-
-    printf("Contenido del buffer:\n");
-    for (size_t i = 0; i < total_size; i++) {
-        printf("%02x ", buffer[i]);
-    }
-    printf("\n");
-
-    while(1){
-        ;;
-    }
-}
 
 void print_mqtt_packet(MQTT_Packet packet) {
     printf("Handle... \n");
@@ -162,46 +40,6 @@ void print_mqtt_packet(MQTT_Packet packet) {
     }
 }
 
-int send_mqtt_packet(int sockfd, MQTT_Packet packet) {
-    // Calcular la longitud total del paquete
-    size_t total_length = 2 + packet.remaining_length;
-
-    // Crear un buffer para enviar el paquete completo
-    char* buffer = malloc(total_length);
-    if (buffer == NULL) {
-        perror("Error al asignar memoria");
-        return -1;
-    }
-
-    // Copiar el encabezado fijo y la longitud restante al buffer
-    buffer[0] = packet.fixed_header;
-    buffer[1] = packet.remaining_length;
-
-    // Copiar el encabezado variable al buffer
-    memcpy(buffer + 2, &packet.variable_header[0], 1);
-    memcpy(buffer + 3, &packet.variable_header[1], 1);
-
-    // Copiar el payload al buffer (si existe)
-    memcpy(buffer + 4, packet.payload, packet.remaining_length - 2);
-
-    // Enviar el paquete completo a través del socket
-    ssize_t bytes_sent = send(sockfd, buffer, total_length, 0);
-    printf("Contenido del buffer:\n");
-    for (size_t i = 0; i < total_length; i++) {
-        printf("%02x ", buffer[i]);
-    }
-    printf("\n");
-
-    if (bytes_sent < 0) {
-        perror("Error al enviar el paquete");
-        free(buffer);
-        return -1;
-    }
-
-    free(buffer);
-    return 0;
-}
-
 void print_connect_packet(const MQTT_Packet *packet) {
     printf("Fixed Header: 0x%02X\n", packet->fixed_header);
     printf("Remaining Length: %d\n", packet->remaining_length);
@@ -219,48 +57,18 @@ void print_connect_packet(const MQTT_Packet *packet) {
     printf("\n");
 }
 
-void send_connect_to_server(int sockfd, MQTT_Packet packet) {
-    // Construir el buffer a enviar
-    size_t total_length = 2 + packet.remaining_length;
-    char* buffer = malloc(total_length);
-    buffer[0] = packet.fixed_header;
-    buffer[1] = packet.remaining_length;
-    memcpy(&buffer[2], packet.variable_header, 10);
-    memcpy(&buffer[12], packet.payload, packet.remaining_length - 10);
-
-    // Enviar el paquete al servidor
-    write(sockfd, buffer, total_length);
-
-    printf("Contenido del buffer:\n");
-    for (size_t i = 0; i < total_length; i++) {
-        printf("%02x ", buffer[i]);
-    }
-    printf("\n");
-
-    // Liberar memoria
-    free(buffer);
-}
-
-int main() {
-    int sockfd, connfd;
-    struct sockaddr_in servaddr, cli;
-
-    // Read IP and port from configuration file
-    FILE *config_file = fopen(CONFIG_FILE, "r");
-    if (config_file == NULL)
-    {
-        perror("Error opening config file");
-        exit(EXIT_FAILURE);
-    }
-
-    char ip[MAX];
+int main(int argc, char *argv[]) {
+    int sockfd, connfd; 
+    struct sockaddr_in servaddr; 
+    char ip[MAX], log_path[MAX];
     int port;
-    if (fscanf(config_file, "%s%d", ip, &port) != 2)
-    {
-        perror("Error reading config file");
-        exit(EXIT_FAILURE);
-    }
-    fclose(config_file);
+
+    if (argc == 4) {
+        strcpy(ip, argv[1]);
+        port = atoi(argv[2]);
+        strcpy(log_path, argv[3]);
+    } else
+        return 1;
 
     // Socket creation and verification
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -278,7 +86,7 @@ int main() {
     servaddr.sin_addr.s_addr = inet_addr(ip);
     servaddr.sin_port = htons(port);
 
-    // Connect the client socket to server socket
+    // Connect ent socket to server socket
     if (connect(sockfd, (SA *)&servaddr, sizeof(servaddr)) != 0)
     {
         printf("connection with the server failed...\n");

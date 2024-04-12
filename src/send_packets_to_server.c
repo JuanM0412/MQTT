@@ -1,16 +1,36 @@
-#include <stdio.h> 
-#include <netdb.h> 
-#include <netinet/in.h> 
-#include <stdlib.h> 
-#include <string.h> 
-#include <sys/socket.h> 
-#include <sys/types.h> 
-#include <unistd.h>
-#include <pthread.h>
 #include <arpa/inet.h>
-#include "../include/handle_packets.h"
+#include <netdb.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include <sys/socket.h>
+#include <unistd.h>
+#include "../include/send_packets_to_server.h"
 
-void send_publish_to_client(int connfd, MQTT_Packet packet){
+void send_connect_to_server(int sockfd, MQTT_Packet packet) {
+    // Construir el buffer a enviar
+    size_t total_length = 2 + packet.remaining_length;
+    char* buffer = malloc(total_length);
+    buffer[0] = packet.fixed_header;
+    buffer[1] = packet.remaining_length;
+    memcpy(&buffer[2], packet.variable_header, 10);
+    memcpy(&buffer[12], packet.payload, packet.remaining_length - 10);
+
+    // Enviar el paquete al servidor
+    write(sockfd, buffer, total_length);
+
+    printf("Contenido del buffer:\n");
+    for (size_t i = 0; i < total_length; i++) {
+        printf("%02x ", buffer[i]);
+    }
+    printf("\n");
+
+    // Liberar memoria
+    free(buffer);
+}
+
+void send_publish_to_server(int sockfd, MQTT_Packet packet) {
     printf("Fixed Header: %u\n", packet.fixed_header);
     printf("Remaining Length: %u\n", packet.remaining_length);
     
@@ -56,7 +76,7 @@ void send_publish_to_client(int connfd, MQTT_Packet packet){
     }
 
     // Send the buffer through the socket
-    write(connfd, buffer, total_size);
+    write(sockfd, buffer, total_size);
 
     printf("Contenido del buffer:\n");
     for (size_t i = 0; i < total_size; i++) {
@@ -65,46 +85,42 @@ void send_publish_to_client(int connfd, MQTT_Packet packet){
     printf("\n");
 }
 
-void send_connack_to_client(int connfd, MQTT_Packet packet) {
-    unsigned char buffer[4];
-    size_t offset = 0;
+int send_subscribe_to_server(int sockfd, MQTT_Packet packet) {
+    // Calcular la longitud total del paquete
+    size_t total_length = 2 + packet.remaining_length;
 
+    // Crear un buffer para enviar el paquete completo
+    char* buffer = malloc(total_length);
+    if (buffer == NULL) {
+        perror("Error al asignar memoria");
+        return -1;
+    }
+
+    // Copiar el encabezado fijo y la longitud restante al buffer
     buffer[0] = packet.fixed_header;
     buffer[1] = packet.remaining_length;
-    buffer[2] = packet.variable_header[0];
-    buffer[3] = packet.variable_header[1];
 
-    write(connfd, buffer, 4);
-}
+    // Copiar el encabezado variable al buffer
+    memcpy(buffer + 2, &packet.variable_header[0], 1);
+    memcpy(buffer + 3, &packet.variable_header[1], 1);
 
-void send_suback_to_client(int connfd, MQTT_Packet packet) {
-    size_t total_size = sizeof(packet.fixed_header) + packet.remaining_length + 1;
-    printf("total_size -> %zu\n", total_size);
+    // Copiar el payload al buffer (si existe)
+    memcpy(buffer + 4, packet.payload, packet.remaining_length - 2);
 
-    unsigned char buffer[total_size];
-    printf("Buffer");
-    size_t offset = 0;
-
-    // Copy structure fields into buffer
-    memcpy(buffer + offset, &packet.fixed_header, sizeof(packet.fixed_header));
-    offset += 1;
-    printf("Offset (1) -> %zu\n", offset);
-
-    memcpy(buffer + offset, &packet.remaining_length, sizeof(packet.remaining_length));
-    offset += 1;
-    printf("Offset (2) -> %zu\n", offset);
-
-    memcpy(buffer + offset, packet.variable_header, 2);
-    offset += 2;
-
-    memcpy(buffer + offset, packet.payload, packet.remaining_length - 2);
-
-    // Send the buffer through the socket
-    write(connfd, buffer, total_size);
-
+    // Enviar el paquete completo a través del socket
+    ssize_t bytes_sent = send(sockfd, buffer, total_length, 0);
     printf("Contenido del buffer:\n");
-    for (size_t i = 0; i < total_size; i++) {
+    for (size_t i = 0; i < total_length; i++) {
         printf("%02x ", buffer[i]);
     }
     printf("\n");
+
+    if (bytes_sent < 0) {
+        perror("Error al enviar el paquete");
+        free(buffer);
+        return -1;
+    }
+
+    free(buffer);
+    return 0;
 }
