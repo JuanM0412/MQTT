@@ -48,8 +48,8 @@ MQTT_Packet create_connect_packet(u_int16_t keep_alive, const char* client_id, c
     connect_packet.variable_header[7] = 0x02;
 
     // Keep Alive
-    connect_packet.variable_header[8] = keep_alive >> 8; // MSB
-    connect_packet.variable_header[9] = keep_alive & 0xFF; // LSB
+    connect_packet.variable_header[8] = keep_alive >> 8;
+    connect_packet.variable_header[9] = keep_alive & 0xFF;
 
     connect_packet.payload[offset++] = client_id_length >> 8;
     connect_packet.payload[offset++] = client_id_length & 0xFF;
@@ -84,6 +84,19 @@ MQTT_Packet create_connect_packet(u_int16_t keep_alive, const char* client_id, c
     return connect_packet;
 }
 
+MQTT_Packet create_connack_packet(u_int8_t return_code) {
+    MQTT_Packet connack_packet;
+
+    connack_packet.fixed_header = MQTT_FIXED_HEADER_CONNACK;
+    connack_packet.remaining_length = 0x02;
+
+    connack_packet.variable_header = malloc(2);
+    connack_packet.variable_header[0] = 0x00;
+    connack_packet.variable_header[1] = return_code;
+
+    return connack_packet;
+}
+
 MQTT_Packet create_publish_packet(const char* topic, const char* message) {
     size_t topic_length = strlen(topic);
     size_t message_length = strlen(message);
@@ -103,11 +116,11 @@ MQTT_Packet create_publish_packet(const char* topic, const char* message) {
 
     // Rellenar el encabezado variable
     // Topic Name
-    publish_packet.variable_header[0] = topic_length >> 8; // MSB
-    publish_packet.variable_header[1] = topic_length & 0xFF; // LSB
+    publish_packet.variable_header[0] = topic_length >> 8;
+    publish_packet.variable_header[1] = topic_length & 0xFF;
     memcpy(&publish_packet.variable_header[2], topic, topic_length);
-    publish_packet.variable_header[topic_length + 2] = (packet_id >> 8) & 0xFF; // MSB
-    publish_packet.variable_header[topic_length + 3] = packet_id & 0xFF; // LSB
+    publish_packet.variable_header[topic_length + 2] = (packet_id >> 8) & 0xFF;
+    publish_packet.variable_header[topic_length + 3] = packet_id & 0xFF;
 
     // Payload (mensaje)
     publish_packet.payload = malloc(message_length);
@@ -144,8 +157,8 @@ MQTT_Packet create_subscribe_packet(const char** topics_to_subscribe) {
 
     // Message ID (any valid value)
     int packet_id = get_packet_id();
-    subscribe_packet.variable_header[0] = packet_id >> 8; // MSB
-    subscribe_packet.variable_header[1] = packet_id & 0xFF; // LSB
+    subscribe_packet.variable_header[0] = packet_id >> 8;
+    subscribe_packet.variable_header[1] = packet_id & 0xFF;
 
     // Copy topics into the payload
     int offset = 0;
@@ -164,6 +177,23 @@ MQTT_Packet create_subscribe_packet(const char** topics_to_subscribe) {
     }
 
     return subscribe_packet;
+}
+
+MQTT_Packet create_suback_packet(unsigned int packet_id, int num_topics) {
+    MQTT_Packet suback_packet;
+
+    suback_packet.fixed_header = MQTT_FIXED_HEADER_SUBACK;
+    suback_packet.remaining_length = 2 + num_topics;
+
+    suback_packet.variable_header[0] = packet_id >> 8;
+    suback_packet.variable_header[1] = packet_id & 0xFF;
+
+    suback_packet.payload = malloc(num_topics);
+    for (int i = 0; i < num_topics; i++) {
+        suback_packet.payload = 0x00;
+    }
+    
+    return suback_packet;
 }
 
 MQTT_Packet create_disconnect_packet() {

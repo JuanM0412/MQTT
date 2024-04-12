@@ -13,8 +13,8 @@
 #include "../include/packet.h"
 #include "../include/tree.h"
 #include "../include/server.h"
+#include "../include/handle_packets.h"
 
-// Function to get the singleton tree instance
 Tree* get_tree() {
     static Tree singleton;
     static int initialized = 0;
@@ -28,8 +28,7 @@ Tree* get_tree() {
     return &singleton;
 }
 
-// Function to handle the tree based on the received topic and message
-void handle_tree(int request, const char *topic, const char *message) {
+void insert_publish(const char *topic, const char *message) {
     Tree *singleton_tree = get_tree();
 
     pthread_mutex_lock(&singleton_tree->mutex);
@@ -51,15 +50,15 @@ void insert_subscribe(const char *topic, int connfd) {
     pthread_mutex_unlock(&singleton_tree->mutex);
 }
 
-// Function to disconnect a client
 void disconnect_client(int connfd) {
     close(connfd);
-    printf("Connection closed.");
+    printf("Connection closed.\n");
 }
 
-// Function to handle the subscribe packet
 void handle_subscribe_packet(MQTT_Packet packet, int connfd) {
     printf("Remaining: %u\n", packet.remaining_length);
+    int num_topics = 0;
+
     for (int i = 0; i < packet.remaining_length - 2; ) {
         // Read topic length
         printf("i (0): %u\n", i);
@@ -78,13 +77,17 @@ void handle_subscribe_packet(MQTT_Packet packet, int connfd) {
 
         // Move to the next topic
         i += 3 + topic_length;
+        num_topics++;
         printf("i (1): %u\n", i);
     }
 
-    disconnect_client(connfd);
+    // unsigned int packet_id = (packet.variable_header[0] >> 8) | packet.variable_header[1];
+    // MQTT_Packet suback_packet = create_suback_packet(packet_id, num_topics);
+    // send_suback_to_client(connfd, suback_packet);
+
+    // disconnect_client(connfd);
 }
 
-// Function to handle the publish packet
 void handle_publish_packet(MQTT_Packet packet, int connfd) {
     size_t topic_length = (packet.variable_header[0] << 8) | packet.variable_header[1];
     size_t payload_length = packet.remaining_length - (topic_length + 4);
@@ -101,25 +104,28 @@ void handle_publish_packet(MQTT_Packet packet, int connfd) {
         }
     }
     
-    handle_tree(1, topic, payload);
+    insert_publish(topic, payload);
 
     disconnect_client(connfd);
 }
 
-// Function to handle the connect packet
 void handle_connect_packet(MQTT_Packet packet, int connfd) {
     printf("Fix3: %u\n", packet.fixed_header);
+    u_int8_t return_code = 0x00;
+
     if (packet.variable_header[1] != 0x04 || packet.variable_header[2] != 'M' ||
         packet.variable_header[3] != 'Q' || packet.variable_header[4] != 'T' ||
         packet.variable_header[5] != 'T' || packet.variable_header[6] != 0x04)
-        printf("Variable header");
+        return_code = 0x01;
 
     printf("CONNECT2\n");
+
+    MQTT_Packet connack_packet = create_connack_packet(return_code);
+    send_connack_to_client(connfd, connack_packet);
 
     disconnect_client(connfd);
 }
 
-// Function to identify the packet type and handle it accordingly
 void identify_packet(MQTT_Packet packet, int connfd) {
     printf("identify_packet\n");
     if (packet.fixed_header == MQTT_FIXED_HEADER_CONNECT){
@@ -127,8 +133,11 @@ void identify_packet(MQTT_Packet packet, int connfd) {
         handle_connect_packet(packet, connfd);
         printf("Fix4: %u\n", packet.fixed_header);
     }
-    else if (packet.fixed_header == MQTT_FIXED_HEADER_PUBLISH)
+    else if (packet.fixed_header == MQTT_FIXED_HEADER_PUBLISH){
+        printf("Fix Pub (1): %u\n", packet.fixed_header);
         handle_publish_packet(packet, connfd);
+        printf("Fix Pub (2): %u\n", packet.fixed_header);
+    }
     else if (packet.fixed_header == MQTT_FIXED_HEADER_SUBSCRIBE)
         handle_subscribe_packet(packet, connfd);
     else{
@@ -137,7 +146,6 @@ void identify_packet(MQTT_Packet packet, int connfd) {
     }
 }
 
-// Function to receive packet from client
 MQTT_Packet receive_packet_from_client(int connfd) {
     printf("receive_packet_from_client\n");
     MQTT_Packet received_packet;
@@ -153,30 +161,23 @@ MQTT_Packet receive_packet_from_client(int connfd) {
 
     received_packet.fixed_header = buffer[offset++];
     received_packet.remaining_length = buffer[offset++];
-    //offset entra a los if's valiendo 2
     
     if (received_packet.fixed_header == MQTT_FIXED_HEADER_PUBLISH) {
-        printf("MQTT_FIXED_HEADER_PUBLISH\n");
         size_t topic_length = (buffer[offset++] << 8) | buffer[offset++];
-        received_packet.variable_header = malloc(5 + topic_length);
-        printf("Malloc var\n");
+        received_packet.variable_header = malloc(4 + topic_length);
 
-        received_packet.variable_header[0] = topic_length >> 8; // MSB
-        received_packet.variable_header[1] = topic_length & 0xFF; // LSB
+        received_packet.variable_header[0] = topic_length >> 8;
+        received_packet.variable_header[1] = topic_length & 0xFF;
         
         memcpy(&received_packet.variable_header[2], buffer + offset, topic_length);
         offset += topic_length;
-        printf("Var(1)\n");
 
-        received_packet.variable_header[topic_length + 2] = (buffer[offset++] >> 8) & 0xFF; // MSB
-        received_packet.variable_header[topic_length + 3] = buffer[offset++] & 0xFF; // LSB
+        received_packet.variable_header[topic_length + 2] = (buffer[offset++] >> 8) & 0xFF;
+        received_packet.variable_header[topic_length + 3] = buffer[offset++] & 0xFF;
 
-        printf("Malloc var(2)\n");
         payload_length = received_packet.remaining_length - (topic_length + 4);
         received_packet.payload = malloc(payload_length);
-        printf("Pay(1)\n");
         memcpy(received_packet.payload, buffer + offset, payload_length);
-        printf("Pay(2)\n");
     } else if (received_packet.fixed_header == MQTT_FIXED_HEADER_CONNECT) {
         received_packet.variable_header = malloc(10);
         memcpy(received_packet.variable_header, buffer + offset, 10);
@@ -188,8 +189,8 @@ MQTT_Packet receive_packet_from_client(int connfd) {
     } else if (received_packet.fixed_header == MQTT_FIXED_HEADER_SUBSCRIBE) {
         received_packet.variable_header = malloc(2);
 
-        received_packet.variable_header[0] = buffer[offset++]; // MSB
-        received_packet.variable_header[1] = buffer[offset++]; // LSB
+        received_packet.variable_header[0] = buffer[offset++];
+        received_packet.variable_header[1] = buffer[offset++];
 
         payload_length = received_packet.remaining_length - 2;
         received_packet.payload = malloc(payload_length);

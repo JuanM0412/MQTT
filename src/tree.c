@@ -9,7 +9,10 @@
 #include <pthread.h>
 #include <arpa/inet.h>
 #include "../include/tree.h"
+#include "../include/packet.h"
+#include "../include/encode.h"
 #include "../include/queue.h"
+#include "../include/handle_packets.h"
 
 //This function get a Topic, and when match a "+"
 //returns the subtopic after the appearance of the wildcard.
@@ -258,16 +261,17 @@ void publish(TreeNode *root, const char *topic, const char *message) {
     } else {
         current_node->messages = (char **)realloc(current_node->messages, (current_node->num_messages + 1) * sizeof(char *));
     }
+    
     current_node->messages[current_node->num_messages] = strdup(message);
     current_node->num_messages++;
-    
+
+    MQTT_Packet packet = create_publish_packet(encodeMessageToUTF8(current_node->name), encodeMessageToUTF8(current_node->messages[current_node->num_messages - 1]));
     if (current_node->users != NULL) {
         for (int i = 0; i < current_node->num_users; i++) {
-            for (int j = 0; j < current_node->num_messages; j++) {
-                write(current_node->users[i], current_node->messages[i], sizeof(current_node->messages[i])); 
-            } 
+            send_publish_to_client(current_node->users[i], packet);
         }
     }
 
+    free_packet(&packet);
     free(topic_copy);
 }
