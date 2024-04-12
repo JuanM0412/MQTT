@@ -264,8 +264,8 @@ void publish(TreeNode *root, const char *topic, const char *message) {
     
     current_node->messages[current_node->num_messages] = strdup(message);
     current_node->num_messages++;
-
-    MQTT_Packet packet = create_publish_packet(encodeMessageToUTF8(current_node->name), encodeMessageToUTF8(current_node->messages[current_node->num_messages - 1]));
+    
+    MQTT_Packet packet = create_publish_packet(encodeMessageToUTF8(topic), encodeMessageToUTF8(current_node->messages[current_node->num_messages - 1]));
     if (current_node->users != NULL) {
         for (int i = 0; i < current_node->num_users; i++) {
             send_publish_to_client(current_node->users[i], packet);

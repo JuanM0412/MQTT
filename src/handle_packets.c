@@ -79,8 +79,10 @@ void send_connack_to_client(int connfd, MQTT_Packet packet) {
 
 void send_suback_to_client(int connfd, MQTT_Packet packet) {
     size_t total_size = sizeof(packet.fixed_header) + packet.remaining_length + 1;
+    printf("total_size -> %zu\n", total_size);
 
     unsigned char buffer[total_size];
+    printf("Buffer");
     size_t offset = 0;
 
     // Copy structure fields into buffer

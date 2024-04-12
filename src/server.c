@@ -81,9 +81,9 @@ void handle_subscribe_packet(MQTT_Packet packet, int connfd) {
         printf("i (1): %u\n", i);
     }
 
-    // unsigned int packet_id = (packet.variable_header[0] >> 8) | packet.variable_header[1];
-    // MQTT_Packet suback_packet = create_suback_packet(packet_id, num_topics);
-    // send_suback_to_client(connfd, suback_packet);
+    unsigned int packet_id = (packet.variable_header[0] >> 8) | packet.variable_header[1];
+    MQTT_Packet suback_packet = create_suback_packet(packet_id, num_topics);
+    send_suback_to_client(connfd, suback_packet);
 
     // disconnect_client(connfd);
 }
@@ -191,6 +191,8 @@ MQTT_Packet receive_packet_from_client(int connfd) {
 
         received_packet.variable_header[0] = buffer[offset++];
         received_packet.variable_header[1] = buffer[offset++];
+        printf("received_packet.variable_header[0]: %02X", received_packet.variable_header[0]);
+        printf("received_packet.variable_header[1]: %02X", received_packet.variable_header[1]);
 
         payload_length = received_packet.remaining_length - 2;
         received_packet.payload = malloc(payload_length);
