@@ -13,6 +13,7 @@
 #include "../include/packet.h"
 #include "../include/tree.h"
 #include "../include/server.h"
+#include "../include/utils.h"
 
 // Function to get the singleton tree instance
 Tree* get_tree() {
@@ -156,6 +157,9 @@ MQTT_Packet receive_packet_from_client(int connfd) {
     //offset entra a los if's valiendo 2
     
     if (received_packet.fixed_header == MQTT_FIXED_HEADER_PUBLISH) {
+        
+        // logger("Publish packet recieved from client", serverIP, clientIP);
+        
         printf("MQTT_FIXED_HEADER_PUBLISH\n");
         size_t topic_length = (buffer[offset++] << 8) | buffer[offset++];
         received_packet.variable_header = malloc(5 + topic_length);
@@ -212,6 +216,8 @@ void *process_connection(void *arg) {
     return NULL;
 }
 
+FILE *log_file = NULL;
+
 // Main function 
 int main(int argc, char *argv[]) { 
     int sockfd, connfd, len; 
@@ -250,12 +256,14 @@ int main(int argc, char *argv[]) {
     if ((listen(sockfd, 5)) != 0) { 
         printf("Listen failed...\n"); 
         exit(0); 
-    } else
+    } else {
         printf("Server listening..\n"); 
+    }
 
     len = sizeof(cli); 
     Tree *singleton_tree = get_tree();
-
+    log_file = fopen(log_path, "a");
+    
     while (1) {
         connfd = accept(sockfd, (SA*)&cli, &len); 
         if (connfd < 0) { 
@@ -268,6 +276,7 @@ int main(int argc, char *argv[]) {
         pthread_create(&tid, NULL, process_connection, &connfd);
     }
 
+    fclose(log_file);
     close(sockfd);
     return 0;
 }
