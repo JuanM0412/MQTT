@@ -6,10 +6,11 @@
 
 #include "../include/utils.h"
 
-void logger(char *message, char *serverIP, char *clientIP) {
+void logger_server(char *message) {
     time_t now = time(NULL);
     char timeStr[50];
     strftime(timeStr, sizeof(timeStr), "%Y-%m-%d %H:%M:%S", localtime(&now));
 
-    fprintf(log_file, "%s - %s - ClientIP: %s - Query: %s - ResponseIP: %s\n", timeStr, message, clientIP, serverIP, message);
+    fprintf(log_file, "%s - %s - Query: %s - ServerIP: %s\n", timeStr, message, serverIP, message);
+    fflush(log_file);
 }
