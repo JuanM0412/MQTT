@@ -11,6 +11,7 @@
 #include "../include/decode.h"
 #include "../include/packet.h"
 #include "../include/send_packets_to_server.h"
+#include "../include/utils.h"
 
 #define MAX 360
 #define SA struct sockaddr
@@ -112,14 +113,17 @@ void *send_packet(void *arg){
     return NULL;
 }
 
+char serverIP[MAX], clientIP[INET_ADDRSTRLEN];
+FILE *log_file = NULL;
+
 int main(int argc, char *argv[]) {
     int sockfd, connfd; 
     struct sockaddr_in servaddr; 
-    char ip[MAX], log_path[MAX];
     int port;
+    char log_path[MAX];
 
     if (argc == 4) {
-        strcpy(ip, argv[1]);
+        strcpy(serverIP, argv[1]);
         port = atoi(argv[2]);
         strcpy(log_path, argv[3]);
     } else
@@ -138,7 +142,7 @@ int main(int argc, char *argv[]) {
 
     // Assign IP, PORT
     servaddr.sin_family = AF_INET;
-    servaddr.sin_addr.s_addr = inet_addr(ip);
+    servaddr.sin_addr.s_addr = inet_addr(serverIP);
     servaddr.sin_port = htons(port);
 
     // Connect ent socket to server socket
@@ -159,6 +163,27 @@ int main(int argc, char *argv[]) {
     // print_mqtt_packet(packet);
     // send_subscribe_to_server(sockfd, packet);
     // printf("ENVIADO");
+
+    char command[] = "curl -s https://api.ipify.org"; 
+    FILE *fp = popen(command, "r");
+    if (fp == NULL) {
+        perror("popen");
+        exit(EXIT_FAILURE);
+    }
+    
+    if (fgets(clientIP, sizeof(clientIP), fp) != NULL) {
+        size_t len = strlen(clientIP);
+        if (len > 0 && clientIP[len - 1] == '\n') {
+            clientIP[len - 1] = '\0';
+        }
+    } else {
+        printf("No se pudo obtener la IP pública.\n");
+    }
+    pclose(fp);
+
+    log_file = fopen(log_path, "a");
+
+    logger_client("hola", connfd);
 
     pthread_t tid;
     printf("\n  ** Thread id **\n");
@@ -252,6 +277,7 @@ int main(int argc, char *argv[]) {
 
     // Close the socket
     close(sockfd);
+    fclose(log_file);
   
     return 0;
 }
