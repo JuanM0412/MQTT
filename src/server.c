@@ -262,7 +262,7 @@ int main(int argc, char *argv[]) {
 
     len = sizeof(cli); 
     Tree *singleton_tree = get_tree();
-    log_file = fopen(log_path, "a");
+    log_file = fopen(log_path, "a");    
     
     while (1) {
         printf("Escuchando\n");
