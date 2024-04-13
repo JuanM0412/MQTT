@@ -132,8 +132,8 @@ MQTT_Packet receive_packet_from_client(int connfd) {
     received_packet.remaining_length = buffer[offset++];
     
     if (received_packet.fixed_header == MQTT_FIXED_HEADER_PUBLISH) {
-        
-        // logger("Publish packet recieved from client", serverIP, clientIP);
+
+        logger_server("Publish packet recieved", connfd);
 
         printf("MQTT_FIXED_HEADER_PUBLISH\n");
         size_t topic_length = (buffer[offset++] << 8) | buffer[offset++];
@@ -156,6 +156,9 @@ MQTT_Packet receive_packet_from_client(int connfd) {
         printf("%s \n", received_packet.payload);
         printf("\n");
     } else if (received_packet.fixed_header == MQTT_FIXED_HEADER_CONNECT) {
+
+        logger_server("Connect packet recieved", connfd);
+
         received_packet.variable_header = malloc(10);
         memcpy(received_packet.variable_header, buffer + offset, 10);
         offset += 10;
@@ -164,6 +167,9 @@ MQTT_Packet receive_packet_from_client(int connfd) {
         received_packet.payload = malloc(payload_length);
         memcpy(received_packet.payload, buffer + offset, payload_length);
     } else if (received_packet.fixed_header == MQTT_FIXED_HEADER_SUBSCRIBE) {
+        
+        logger_server("Subscribe packet recieved", connfd);
+        
         received_packet.variable_header = malloc(2);
 
         received_packet.variable_header[0] = buffer[offset++];
