@@ -65,9 +65,8 @@ void handle_publish_packet(MQTT_Packet packet, int connfd) {
 
     char *payload = malloc(payload_length);
     memcpy(payload, packet.payload, payload_length);
-    printf("Contenido del payload:\n");
-    printf("%s \n", packet.payload);
-    printf("\n");
+    printf("Contenido del payload handle:\n");
+    printf("%s", packet.payload);
 
     for (int i = 0; i <= topic_length; i++) {
         if (topic[i] == '+' || topic[i] == '#') {
@@ -76,6 +75,7 @@ void handle_publish_packet(MQTT_Packet packet, int connfd) {
     }
     
     insert_publish(topic, packet.payload);
+    free(topic);
 }
 
 void handle_connect_packet(MQTT_Packet packet, int connfd) {
@@ -125,6 +125,12 @@ MQTT_Packet receive_packet_from_client(int connfd) {
         exit(EXIT_FAILURE);
     }
 
+    printf("Contenido del buffer:\n");
+    for (size_t i = 0; i < bytes_received; i++) {
+        printf("%02x ", buffer[i]);
+    }
+    printf("\n");
+
     size_t offset = 0;
     size_t payload_length = 0;
 
@@ -132,8 +138,6 @@ MQTT_Packet receive_packet_from_client(int connfd) {
     received_packet.remaining_length = buffer[offset++];
     
     if (received_packet.fixed_header == MQTT_FIXED_HEADER_PUBLISH) {
-        // logger("Publish packet recieved from client", serverIP, clientIP);
-
         printf("MQTT_FIXED_HEADER_PUBLISH\n");
         size_t topic_length = (buffer[offset++] << 8) | buffer[offset++];
         received_packet.variable_header = malloc(4 + topic_length);
@@ -151,8 +155,11 @@ MQTT_Packet receive_packet_from_client(int connfd) {
         printf("Pay len: %zu\n", payload_length);
         received_packet.payload = malloc(payload_length);
         memcpy(received_packet.payload, buffer + offset, payload_length);
+        printf("Pay len: %zu\n", payload_length);
         printf("Contenido del payload:\n");
-        printf("%s \n", received_packet.payload);
+        for (size_t i = 0; i < payload_length; i++) {
+            printf("%02X ", received_packet.payload[i]);
+        }
         printf("\n");
     } else if (received_packet.fixed_header == MQTT_FIXED_HEADER_CONNECT) {
         received_packet.variable_header = malloc(10);
@@ -186,10 +193,9 @@ MQTT_Packet receive_packet_from_client(int connfd) {
 void *process_connection(void *arg) {
     printf("*process_connection\n");
     int connfd = *((int*)arg);
-    MQTT_Packet received_packet;
 
     while (1) {
-        received_packet = receive_packet_from_client(connfd);
+        MQTT_Packet received_packet = receive_packet_from_client(connfd);
         printf("Recibido\n");
         identify_packet(received_packet, connfd);
         printf("Identificado\n");
