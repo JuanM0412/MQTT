@@ -41,7 +41,7 @@ void *send_packet(void *arg) {
 
             MQTT_Packet packet = create_publish_packet(topic, message);
             send_publish_to_server(sockfd, packet);
-            logger_client("Publish packet sent to server", sockfd);
+            logger_server("Publish packet sent to server", sockfd);
         } else if (option == 2) {
             printf("\n  ** Subscribe **\n");
             char topic[100];
@@ -62,10 +62,10 @@ void *send_packet(void *arg) {
 
             MQTT_Packet packet = create_subscribe_packet(topics);
             send_subscribe_to_server(sockfd, packet);
-            logger_client("Subscribe packet sent to server", sockfd);
+            logger_server("Subscribe packet sent to server", sockfd);
         } else if (option == 3) {
             printf("\n  ** Disconnect **\n");
-            logger_client("Disconnect packet sent to server", sockfd);
+            logger_server("Disconnect packet sent to server", sockfd);
             close(sockfd);
             exit(0);
         } else {
@@ -174,9 +174,11 @@ int main(int argc, char *argv[]) {
     else
         printf("connected to the server..\n");
 
+    log_file = fopen(log_path, "a");
+
     MQTT_Packet packet = create_connect_packet(1, encodeMessageToUTF8("J01"), encodeMessageToUTF8("Juan123"), encodeMessageToUTF8("12345678"));
     send_connect_to_server(sockfd, packet);
-    logger_client("Connect packet sent to the server", sockfd);
+    logger_server("Connect packet sent to the server", sockfd);
 
     pthread_t send_tid, receive_tid;
     pthread_create(&receive_tid, NULL, receive_packet, &sockfd);
