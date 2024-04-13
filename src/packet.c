@@ -100,6 +100,8 @@ MQTT_Packet create_connack_packet(u_int8_t return_code) {
 MQTT_Packet create_publish_packet(const char* topic, const char* message) {
     size_t topic_length = strlen(topic);
     size_t message_length = strlen(message);
+    printf("%zu\n", message_length);
+    printf("Messageeee: %s\n", message);
     unsigned int packet_id = get_packet_id();
 
     // Calcular la longitud total del paquete PUBLISH
@@ -125,6 +127,7 @@ MQTT_Packet create_publish_packet(const char* topic, const char* message) {
     // Payload (mensaje)
     publish_packet.payload = malloc(message_length);
     memcpy(publish_packet.payload, message, message_length);
+    printf("%02X\n", publish_packet.payload);
     
     return publish_packet;
 }
@@ -141,7 +144,7 @@ MQTT_Packet create_subscribe_packet(const char** topics_to_subscribe) {
     }
 
     // Calculate total packet size
-    size_t packet_size = 2 + payload_length + (num_topics * 2); // 2 bytes for each topic length
+    size_t packet_size = 2 + payload_length + (num_topics * 3); // 2 bytes for each topic length
 
     // Allocate memory for the packet
     subscribe_packet.variable_header = malloc(2);
@@ -176,22 +179,40 @@ MQTT_Packet create_subscribe_packet(const char** topics_to_subscribe) {
         subscribe_packet.payload[offset++] = 0x00;
     }
 
+    printf("Payload: ");
+    for (int i = 0; i < subscribe_packet.remaining_length - 2; i++) { // Resta 2 para los bytes del packet_id
+        printf("%c ", subscribe_packet.payload[i]);
+    }
+
     return subscribe_packet;
 }
 
 MQTT_Packet create_suback_packet(unsigned int packet_id, int num_topics) {
+    printf("Num topics: %d\n", num_topics);
     MQTT_Packet suback_packet;
 
     suback_packet.fixed_header = MQTT_FIXED_HEADER_SUBACK;
+    printf("MQTT_FIXED_HEADER_SUBACK\n");
     suback_packet.remaining_length = 2 + num_topics;
+    suback_packet.variable_header = malloc(2);
+    printf("Remaining len: %02X\n", suback_packet.remaining_length);
 
     suback_packet.variable_header[0] = packet_id >> 8;
+    printf("suback_packet.variable_header[0]: %02X\n", suback_packet.variable_header[0]);
     suback_packet.variable_header[1] = packet_id & 0xFF;
+    printf("suback_packet.variable_header[1]: %02X\n", suback_packet.variable_header[1]);
 
     suback_packet.payload = malloc(num_topics);
+    printf("malloc\n");
     for (int i = 0; i < num_topics; i++) {
-        suback_packet.payload = 0x00;
+        suback_packet.payload[i] = 0x00;
     }
+
+    printf("Payload: ");
+    for (int i = 0; i < num_topics; i++) { // Resta 2 para los bytes del packet_id
+        printf("%02X ", suback_packet.payload[i]);
+    }
+    printf("\n");
     
     return suback_packet;
 }
