@@ -37,7 +37,7 @@ void handle_subscribe_packet(MQTT_Packet packet, int connfd) {
         for (int j = 0; j < topic_length; j++) {
             topic[j] = packet.payload[i + 2 + j];
         }
-        printf("Topic: %s\n", decodeUTF8(topic));
+        printf("Topic: %s\n", topic);
         insert_subscribe(topic, connfd);
         free(topic);
         printf("\n");
@@ -47,23 +47,27 @@ void handle_subscribe_packet(MQTT_Packet packet, int connfd) {
         num_topics++;
         printf("i (1): %u\n", i);
     }
-
+    
     unsigned int packet_id = (packet.variable_header[0] >> 8) | packet.variable_header[1];
     MQTT_Packet suback_packet = create_suback_packet(packet_id, num_topics);
     send_suback_to_client(connfd, suback_packet);
 
-    // disconnect_client(connfd);
+    free_packet(&suback_packet);
 }
 
 void handle_publish_packet(MQTT_Packet packet, int connfd) {
     size_t topic_length = (packet.variable_header[0] << 8) | packet.variable_header[1];
     size_t payload_length = packet.remaining_length - (topic_length + 4);
+    printf("Pay len: %zu\n", payload_length);
 
     char *topic = malloc(topic_length);
     memcpy(topic, &packet.variable_header[2], topic_length);
 
     char *payload = malloc(payload_length);
     memcpy(payload, packet.payload, payload_length);
+    printf("Contenido del payload:\n");
+    printf("%s \n", packet.payload);
+    printf("\n");
 
     for (int i = 0; i <= topic_length; i++) {
         if (topic[i] == '+' || topic[i] == '#') {
@@ -71,9 +75,7 @@ void handle_publish_packet(MQTT_Packet packet, int connfd) {
         }
     }
     
-    insert_publish(topic, payload);
-
-    disconnect_client(connfd);
+    insert_publish(topic, packet.payload);
 }
 
 void handle_connect_packet(MQTT_Packet packet, int connfd) {
@@ -89,8 +91,6 @@ void handle_connect_packet(MQTT_Packet packet, int connfd) {
 
     MQTT_Packet connack_packet = create_connack_packet(return_code);
     send_connack_to_client(connfd, connack_packet);
-
-    disconnect_client(connfd);
 }
 
 void identify_packet(MQTT_Packet packet, int connfd) {
@@ -117,6 +117,8 @@ MQTT_Packet receive_packet_from_client(int connfd) {
     printf("receive_packet_from_client\n");
     MQTT_Packet received_packet;
     unsigned char buffer[MAX];
+
+    memset(buffer, 0, MAX);
 
     ssize_t bytes_received = read(connfd, buffer, sizeof(buffer));
     if (bytes_received <= 0) {
@@ -146,8 +148,12 @@ MQTT_Packet receive_packet_from_client(int connfd) {
         received_packet.variable_header[topic_length + 3] = buffer[offset++] & 0xFF;
 
         payload_length = received_packet.remaining_length - (topic_length + 4);
+        printf("Pay len: %zu\n", payload_length);
         received_packet.payload = malloc(payload_length);
         memcpy(received_packet.payload, buffer + offset, payload_length);
+        printf("Contenido del payload:\n");
+        printf("%s \n", received_packet.payload);
+        printf("\n");
     } else if (received_packet.fixed_header == MQTT_FIXED_HEADER_CONNECT) {
         received_packet.variable_header = malloc(10);
         memcpy(received_packet.variable_header, buffer + offset, 10);
@@ -167,6 +173,10 @@ MQTT_Packet receive_packet_from_client(int connfd) {
         payload_length = received_packet.remaining_length - 2;
         received_packet.payload = malloc(payload_length);
         memcpy(received_packet.payload, buffer + offset, payload_length);
+
+        for (size_t i = 0; i < payload_length; i++) {
+            printf("%c ", received_packet.payload[i]);
+        }
     }
 
     return received_packet;
@@ -176,11 +186,16 @@ MQTT_Packet receive_packet_from_client(int connfd) {
 void *process_connection(void *arg) {
     printf("*process_connection\n");
     int connfd = *((int*)arg);
-    MQTT_Packet received_packet = receive_packet_from_client(connfd);
-    printf("Recibido\n");
-    identify_packet(received_packet, connfd);
+    MQTT_Packet received_packet;
 
-    free_packet(&received_packet);
+    while (1) {
+        received_packet = receive_packet_from_client(connfd);
+        printf("Recibido\n");
+        identify_packet(received_packet, connfd);
+        printf("Identificado\n");
+
+        free_packet(&received_packet);
+    }
     
     return NULL;
 }
@@ -234,6 +249,7 @@ int main(int argc, char *argv[]) {
     log_file = fopen(log_path, "a");
     
     while (1) {
+        printf("Escuchando\n");
         connfd = accept(sockfd, (SA*)&cli, &len); 
         if (connfd < 0) { 
             printf("server accept failed...\n"); 
@@ -243,6 +259,7 @@ int main(int argc, char *argv[]) {
         
         pthread_t tid;
         pthread_create(&tid, NULL, process_connection, &connfd);
+        printf("Termina esta función\n");
     }
 
     fclose(log_file);

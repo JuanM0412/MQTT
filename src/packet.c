@@ -100,6 +100,8 @@ MQTT_Packet create_connack_packet(u_int8_t return_code) {
 MQTT_Packet create_publish_packet(const char* topic, const char* message) {
     size_t topic_length = strlen(topic);
     size_t message_length = strlen(message);
+    printf("%zu\n", message_length);
+    printf("Messageeee: %s\n", message);
     unsigned int packet_id = get_packet_id();
 
     // Calcular la longitud total del paquete PUBLISH
@@ -125,6 +127,7 @@ MQTT_Packet create_publish_packet(const char* topic, const char* message) {
     // Payload (mensaje)
     publish_packet.payload = malloc(message_length);
     memcpy(publish_packet.payload, message, message_length);
+    printf("%02X\n", publish_packet.payload);
     
     return publish_packet;
 }

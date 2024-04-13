@@ -6,6 +6,7 @@
 #include <strings.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <pthread.h>
 #include "../include/encode.h"
 #include "../include/decode.h"
 #include "../include/packet.h"
@@ -57,6 +58,60 @@ void print_connect_packet(const MQTT_Packet *packet) {
     printf("\n");
 }
 
+void *send_packet(void *arg){
+    int sockfd = *((int*)arg);
+    printf("\n  ** Send packet **\n");
+    while (1) {
+        int option;
+        printf("Enter the number of your option: \n1. Publish \n2. Subscribe \n3. Disconnect \n");
+        scanf("%d", &option);
+        
+        // Limpia el búfer de entrada
+        while (getchar() != '\n');
+
+        if (option == 1) {
+            printf("\n  ** Publish **\n");
+            char topic[100];
+            char message[100];
+
+            printf("Enter the topic: ");
+            scanf("%s", topic);
+            printf("Enter the message: ");
+            scanf("%s", message);
+
+            MQTT_Packet packet = create_publish_packet(topic, message);
+            send_publish_to_server(sockfd, packet);
+            printf("%02X\n", packet.payload);
+        } else if (option == 2) {
+            printf("\n  ** Subscribe **\n");
+            char topic[100];
+            printf("Enter the topic to subscribe to (or type 'done' to finish): ");
+            scanf("%s", topic);
+
+            // Almacena los topics ingresados por el usuario
+            const char *topics[4];
+            int count = 0;
+            while (strcmp(topic, "done") != 0 && count < 3 - 1) {
+                topics[count] = topic;
+                count++;
+                printf("Enter the next topic (or type 'done' to finish): ");
+                scanf("%s", topic);
+            }
+            topics[4] = NULL; // Agrega un NULL al final del array de topics
+
+            MQTT_Packet packet = create_subscribe_packet(topics);
+            send_subscribe_to_server(sockfd, packet);
+        } else if (option == 3) {
+            printf("\n  ** Disconnect **\n");
+            close(sockfd);
+            exit(0);
+        } else {
+            printf("Invalid option, try again.\n");
+        }
+    }
+    return NULL;
+}
+
 int main(int argc, char *argv[]) {
     int sockfd, connfd; 
     struct sockaddr_in servaddr; 
@@ -95,22 +150,22 @@ int main(int argc, char *argv[]) {
     else
         printf("connected to the server..\n");
 
-    MQTT_Packet packet = create_connect_packet(1, encodeMessageToUTF8("J01"), encodeMessageToUTF8("Juan123"), encodeMessageToUTF8("12345678"));
-    print_connect_packet(&packet);
+    // MQTT_Packet packet = create_connect_packet(1, encodeMessageToUTF8("J01"), encodeMessageToUTF8("Juan123"), encodeMessageToUTF8("12345678"));
+    //print_connect_packet(&packet);
     // send_connect_to_server(sockfd, packet);
-    // MQTT_Packet packet = create_publish_packet(encodeMessageToUTF8("EAFIT/Bloque/18/Salon/301/Temperatura"), encodeMessageToUTF8("29"));
-    // send_publish_to_server(sockfd, packet);
-
-    const char *topics[] = {
-        encodeMessageToUTF8("EAFIT/Bloque/18/Salon/301/Humedad"),
-        encodeMessageToUTF8("EAFIT/Bloque/18/Salon/301/Temperatura"),
-        NULL
-    };
+    //free_packet(&packet);
 
     // MQTT_Packet packet = create_subscribe_packet(topics);
     // print_mqtt_packet(packet);
-    // send_mqtt_packet(sockfd, packet);
+    // send_subscribe_to_server(sockfd, packet);
     // printf("ENVIADO");
+
+    pthread_t tid;
+    printf("\n  ** Thread id **\n");
+    pthread_create(&tid, NULL, send_packet, &sockfd);
+    printf("\n  ** Llama la func **\n");
+
+    pthread_join(tid, NULL);
 
     while (1) {
         printf("receive_packet_from_server\n");
@@ -167,7 +222,8 @@ int main(int argc, char *argv[]) {
             received_packet.variable_header[1] = buffer[offset];
 
             if (received_packet.variable_header[1] == 0x00) {
-                printf("Connected to MQTT broker");
+                printf("Connected to MQTT broker\n");
+                break;
             }
         } else if (received_packet.fixed_header == MQTT_FIXED_HEADER_SUBACK) {
             received_packet.variable_header = malloc(2);
@@ -189,10 +245,13 @@ int main(int argc, char *argv[]) {
         free_packet(&received_packet);
     }
 
+    MQTT_Packet packet_p = create_publish_packet(encodeMessageToUTF8("EAFIT/Bloque/18/Salon/301/Temperatura"), encodeMessageToUTF8("29"));
+    send_publish_to_server(sockfd, packet_p);
+    printf("%02X\n", packet_p.payload);
+    free_packet(&packet_p);
+
     // Close the socket
     close(sockfd);
-  
-    free_packet(&packet);
   
     return 0;
 }

@@ -20,6 +20,7 @@ void insert_publish(const char *topic, const char *message) {
     pthread_mutex_lock(&singleton_tree->mutex);
 
     publish(singleton_tree->tree, topic, message);
+    printf("Mensajeeee: %s\n", message);
     printTree(singleton_tree->tree, 0);
 
     pthread_mutex_unlock(&singleton_tree->mutex);

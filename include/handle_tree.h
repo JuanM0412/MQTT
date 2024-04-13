@@ -2,7 +2,7 @@
 #define HANDLE_TREE_H
 
 #include "tree.h"
-#include <bits/pthreadtypes.h>
+#include <pthread.h>
 
 #define TreeNode struct TreeNode
 
