@@ -1,4 +1,11 @@
 # MQTT
+## Table of Contents
+- [Introduction](Introduction)
+- [Achievements and Limitations](Achievements-and-Limitations)
+- [Selected socket type](Selected-socket-type.-Stream-(SOCK_STREAM)"-or-"Datagram-(SOCK_DGRAM)")
+- [Conclusions](Conclusions)
+- [References](References)
+
 ## Introduction
 MQTT (Message Queuing Telemetry Transport) is a lightweight messaging protocol, widely used in IoT for its low bandwidth consumption and based on the client-server model. It was developed by IBM in the 1990s, but has since been adopted by the open-source community and has become an open standard, primarily driven by Oasis.
 
