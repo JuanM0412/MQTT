@@ -13,6 +13,8 @@
 #include "../include/send_packets_to_server.h"
 
 #define MAX 360
+FILE *log_file = NULL;
+char serverIP[MAX], clientIP[INET_ADDRSTRLEN];
 #define SA struct sockaddr
 
 void *send_packet(void *arg) {
@@ -38,7 +40,7 @@ void *send_packet(void *arg) {
 
             MQTT_Packet packet = create_publish_packet(topic, message);
             send_publish_to_server(sockfd, packet);
-            printf("%02X\n", packet.payload);
+            logger_client("Publish packet sent to server", sockfd);
         } else if (option == 2) {
             printf("\n  ** Subscribe **\n");
             char topic[100];
@@ -59,8 +61,10 @@ void *send_packet(void *arg) {
 
             MQTT_Packet packet = create_subscribe_packet(topics);
             send_subscribe_to_server(sockfd, packet);
+            logger_client("Subscribe packet sent to server", sockfd);
         } else if (option == 3) {
             printf("\n  ** Disconnect **\n");
+            logger_client("Disconnect packet sent to server", sockfd);
             close(sockfd);
             exit(0);
         } else {
@@ -73,7 +77,6 @@ void *send_packet(void *arg) {
 void *receive_packet(void *arg) {
     int sockfd = *((int*)arg);
     while (1) {
-        printf("receive_packet_from_server\n");
         MQTT_Packet received_packet;
         unsigned char buffer[MAX];
 
@@ -89,38 +92,25 @@ void *receive_packet(void *arg) {
         received_packet.remaining_length = buffer[offset++];
         
         if (received_packet.fixed_header == MQTT_FIXED_HEADER_PUBLISH) {
-            printf("MQTT_FIXED_HEADER_PUBLISH\n");
             size_t topic_length = (buffer[offset++] << 8) | buffer[offset++];
+            char *topic = malloc(topic_length);
             received_packet.variable_header = malloc(4 + topic_length);
-            printf("Malloc var\n");
 
             received_packet.variable_header[0] = topic_length >> 8;
             received_packet.variable_header[1] = topic_length & 0xFF;
             
             memcpy(&received_packet.variable_header[2], buffer + offset, topic_length);
+            memcpy(topic, buffer + offset, topic_length);
             offset += topic_length;
-            printf("Var(1)\n");
 
             received_packet.variable_header[topic_length + 2] = (buffer[offset++] >> 8) & 0xFF;
             received_packet.variable_header[topic_length + 3] = buffer[offset++] & 0xFF;
 
-            printf("Malloc var(2)\n");
             payload_length = received_packet.remaining_length - (topic_length + 4);
             received_packet.payload = malloc(payload_length);
-            printf("Pay(1)\n");
             memcpy(received_packet.payload, buffer + offset, payload_length);
-            printf("Pay(2)\n");
-
-            printf("Variable Header: ");
-            for (int i = 0; i < topic_length + 4; i++) { // Resta 2 para los bytes del received_packet_id
-                printf("%c ", received_packet.variable_header[i]);
-            }
-            printf("\n");
-
-            printf("Payload: ");
-            for (int i = 0; i < payload_length; i++) {
-                printf("%c ", received_packet.payload[i]);
-            }
+            printf("El mensaje %s fue publicado en %s\n", received_packet.payload, topic);
+            free(topic);
         } else if (received_packet.fixed_header == MQTT_FIXED_HEADER_CONNACK) {
             received_packet.variable_header = malloc(2);
             received_packet.variable_header[0] = buffer[offset++];
@@ -135,16 +125,10 @@ void *receive_packet(void *arg) {
             payload_length = received_packet.remaining_length - 2;
 
             received_packet.variable_header[0] = buffer[offset++];
-            printf("received_packet.variable_header[0]: %02X\n", received_packet.variable_header[0]);
             received_packet.variable_header[1] = buffer[offset++];
-            printf("received_packet.variable_header[1]: %02X\n", received_packet.variable_header[1]);
 
             received_packet.payload = malloc(payload_length);
             memcpy(received_packet.payload, buffer + offset, payload_length);
-            printf("Payload: ");
-            for (int i = 0; i < payload_length; i++) {
-                printf("%02X ", received_packet.payload[i]);
-            }
         }
 
         free_packet(&received_packet);
@@ -154,11 +138,11 @@ void *receive_packet(void *arg) {
 int main(int argc, char *argv[]) {
     int sockfd, connfd; 
     struct sockaddr_in servaddr; 
-    char ip[MAX], log_path[MAX];
+    char log_path[MAX];
     int port;
 
     if (argc == 4) {
-        strcpy(ip, argv[1]);
+        strcpy(serverIP, argv[1]);
         port = atoi(argv[2]);
         strcpy(log_path, argv[3]);
     } else
@@ -177,7 +161,7 @@ int main(int argc, char *argv[]) {
 
     // Assign IP, PORT
     servaddr.sin_family = AF_INET;
-    servaddr.sin_addr.s_addr = inet_addr(ip);
+    servaddr.sin_addr.s_addr = inet_addr(serverIP);
     servaddr.sin_port = htons(port);
 
     // Connect ent socket to server socket
@@ -191,15 +175,17 @@ int main(int argc, char *argv[]) {
 
     MQTT_Packet packet = create_connect_packet(1, encodeMessageToUTF8("J01"), encodeMessageToUTF8("Juan123"), encodeMessageToUTF8("12345678"));
     send_connect_to_server(sockfd, packet);
+    logger_client("Connect packet sent to the server", sockfd);
 
     pthread_t send_tid, receive_tid;
-    pthread_create(&send_tid, NULL, send_packet, &sockfd);
     pthread_create(&receive_tid, NULL, receive_packet, &sockfd);
+    pthread_create(&send_tid, NULL, send_packet, &sockfd);
 
     pthread_join(send_tid, NULL);
     pthread_join(receive_tid, NULL);
 
     // Close the socket
+    fclose(log_file);
     close(sockfd);
   
     return 0;
