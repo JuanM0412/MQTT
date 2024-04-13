@@ -36,11 +36,11 @@ Finally, another aspect that was not developed was the unsubscribe message type.
 - [X] Publish
 - [X] Disconect
 ## Conclusions
-Developing the protocol yields a wealth of valuable learnings, not only in terms of soft skills but also technical skills. For instance, it involves crafting a concurrent application for message transmission and reception via sockets, and implementing optimal data structures to represent our logical models in code.
+- Developing the protocol yields a wealth of valuable learnings, not only in terms of soft skills but also technical skills. For instance, it involves crafting a concurrent application for message transmission and reception via sockets, and implementing optimal data structures to represent our logical models in code.
 
-Time management and task allocation are pivotal yet often overlooked factors in software project development. With proper planning and effective team distribution, the end result is likely to be positive.
+- Time management and task allocation are pivotal yet often overlooked factors in software project development. With proper planning and effective team distribution, the end result is likely to be positive.
 
-Implementing a protocol according to formal specifications is challenging but not impossible. Confronting such a technical document can be daunting yet ultimately rewarding.
+- Implementing a protocol according to formal specifications is challenging but not impossible. Confronting such a technical document can be daunting yet ultimately rewarding.
 
 ## References
 - [Playing with UTF-8 in C++](https://mobiarch.wordpress.com/2022/12/03/playing-with-utf-8-in-c/)
