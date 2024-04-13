@@ -7,7 +7,7 @@
 - [References](https://github.com/JuanM0412/MQTT/tree/master?tab=readme-ov-file#references)
 
 ## Introduction
-MQTT (Message Queuing Telemetry Transport) is a lightweight messaging protocol, widely used in IoT for its low bandwidth consumption and based on the client-server model. It was developed by IBM in the 1990s, but has since been adopted by the open-source community and has become an open standard, primarily driven by Oasis.
+MQTT (Message Queuing Telemetry Transport) is a lightweight messaging protocol widely used in IoT for its low bandwidth consumption. It is based on the client-server model. IBM developed MQTT in the 1990s, but since then, the open-source community has adopted it, making it an open standard primarily driven by Oasis.
 
 The communication model of MQTT follows a publish/subscribe approach, which is a messaging pattern where message senders (called "publishers") do not send messages directly to specific recipients, but instead publish messages to "topics." Message receivers (called "subscribers") subscribe to one or more topics and automatically receive messages published on those topics.
 
@@ -23,7 +23,7 @@ With a team of three people, it was considered that the most appropriate way to 
 
 The selected socket type was Stream, supported by:
 
-Connection reliability: MQTT is a TCP/IP-based protocol that requires a reliable and stable connection between the client and server. Stream sockets (SOCK_STREAM) provide a reliable, bidirectional connection that is ideal for MQTT communication. Datagram, on the other hand, operates with UDP.
+Connection reliability: MQTT is a TCP/IP-based protocol that requires a reliable and stable connection between the client and server. Stream sockets (SOCK_STREAM) provide a reliable, bidirectional connection ideal for MQTT communication. Datagram, on the other hand, operates with UDP.
 
 Widely compatible: Since MQTT is based on TCP/IP, most MQTT broker implementations are built on stream sockets due to their wide compatibility and reliability.
 
@@ -41,11 +41,12 @@ Finally, another aspect that was not developed was the unsubscribe message type.
 - [X] Connect
 - [X] Subscribe
 - [X] Publish
-- [X] Disconect
-## Conclusions
-- Developing the protocol yields a wealth of valuable learnings, not only in terms of soft skills but also technical skills. For instance, it involves crafting a concurrent application for message transmission and reception via sockets, and implementing optimal data structures to represent our logical models in code.
+- [X] Disconnect
 
-- Time management and task allocation are pivotal yet often overlooked factors in software project development. With proper planning and effective team distribution, the end result is likely to be positive.
+## Conclusions
+- Developing the protocol yields a wealth of valuable learnings, not only in terms of soft skills but also technical skills. For instance, it involves crafting a concurrent application for message transmission and reception via sockets and implementing optimal data structures to represent our logical models in code.
+
+- Time management and task allocation are pivotal yet often overlooked factors in software project development. With proper planning and effective team distribution, the result is likely to be positive.
 
 - Implementing a protocol according to formal specifications is challenging but not impossible. Confronting such a technical document can be daunting yet ultimately rewarding.
 
