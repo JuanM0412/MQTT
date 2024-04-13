@@ -29,7 +29,8 @@ Widely compatible: Since MQTT is based on TCP/IP, most MQTT broker implementatio
 
 Suitable for applications requiring continuous data transmission, and it also allows bidirectional communication, ideal for MQTT implementation purposes.
 
-- UML
+![Copia de Diagrama de secuencia básico](https://github.com/JuanM0412/MQTT/assets/99107537/cac4f813-7d5e-474e-81d7-7561cf78220b)
+
 ## Achievements and Limitations
 Among the achieved aspects, it is worth highlighting the ability to handle multiple concurrent connections within the same server. An efficient data structure for storing messages and users associated with each topic was also successfully implemented, along with a streamlined structure for handling packets, including encoding, decoding algorithms, and interactions with the topic tree.
 
