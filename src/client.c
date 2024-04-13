@@ -10,11 +10,12 @@
 #include "../include/encode.h"
 #include "../include/decode.h"
 #include "../include/packet.h"
+#include "../include/utils.h"
 #include "../include/send_packets_to_server.h"
 
 #define MAX 360
 FILE *log_file = NULL;
-char serverIP[MAX], clientIP[INET_ADDRSTRLEN];
+char serverIP[MAX];
 #define SA struct sockaddr
 
 void *send_packet(void *arg) {

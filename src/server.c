@@ -173,8 +173,6 @@ void *process_connection(void *arg) {
     return NULL;
 }
 
-FILE *log_file = NULL;
-
 // Main function 
 int main(int argc, char *argv[]) { 
     int sockfd, connfd, len; 
