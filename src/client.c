@@ -209,6 +209,7 @@ int main(int argc, char *argv[]) {
 
     MQTT_Packet packet = create_connect_packet(1, encodeMessageToUTF8("J01"), encodeMessageToUTF8("Juan123"), encodeMessageToUTF8("12345678"));
     send_connect_to_server(sockfd, packet);
+    logger_client("Connect packet sent to the server", sockfd);
 
     pthread_t send_tid, receive_tid;
     pthread_create(&send_tid, NULL, send_packet, &sockfd);
