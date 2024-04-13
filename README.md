@@ -42,7 +42,8 @@ Finally, another aspect that was not developed was the unsubscribe message type.
 - [X] Subscribe
 - [X] Publish
 - [X] Disconnect
-
+- [X] Log Server
+- [ ] Log Client
 ## Conclusions
 - Developing the protocol yields a wealth of valuable learnings, not only in terms of soft skills but also technical skills. For instance, it involves crafting a concurrent application for message transmission and reception via sockets and implementing optimal data structures to represent our logical models in code.
 
