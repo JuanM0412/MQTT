@@ -16,50 +16,7 @@
 #define MAX 360
 #define SA struct sockaddr
 
-void print_mqtt_packet(MQTT_Packet packet) {
-    printf("Handle... \n");
-    printf("Fixed Header: 0x%02X\n", packet.fixed_header);
-    printf("Remaining Length: %d\n", packet.remaining_length);
-    printf("Variable Header: 0x%02X 0x%02X\n", packet.variable_header[0], packet.variable_header[1]);
-    printf("Payload:\n");
-    
-    for (int i = 0; i < packet.remaining_length; ) {
-        // Leer longitud del tema
-        int topic_length = (packet.payload[i] << 8) | packet.payload[i + 1];
-        printf("Topic Length: %d\n", topic_length);
-
-        // Leer el tema
-        printf("Topic: ");
-        char *topic = malloc(topic_length);
-        for (int j = 0; j < topic_length; j++) {
-            topic[j] = packet.payload[i + 2 + j];
-        }
-        printf("Topic: %s\n", topic);
-        printf("\n");
-
-        // Mover al siguiente tema
-        i += 2 + topic_length;
-    }
-}
-
-void print_connect_packet(const MQTT_Packet *packet) {
-    printf("Fixed Header: 0x%02X\n", packet->fixed_header);
-    printf("Remaining Length: %d\n", packet->remaining_length);
-
-    printf("Variable Header: ");
-    for (int i = 0; i < packet->remaining_length - 2; i++) { // Resta 2 para los bytes del packet_id
-        printf("%c ", packet->variable_header[i]);
-    }
-    printf("\n");
-
-    printf("Payload: ");
-    for (int i = 0; i < packet->remaining_length - 2; i++) { // Resta 2 para los bytes del packet_id
-        printf("%c ", packet->payload[i]);
-    }
-    printf("\n");
-}
-
-void *send_packet(void *arg){
+void *send_packet(void *arg) {
     int sockfd = *((int*)arg);
     printf("\n  ** Send packet **\n");
     while (1) {
@@ -92,16 +49,17 @@ void *send_packet(void *arg){
             printf("Enter the topic to subscribe to (or type 'done' to finish): ");
             scanf("%s", topic);
 
-            // Almacena los topics ingresados por el usuario
-            const char *topics[4];
+            const char *topics[4]; // Declaración de un array de 4 punteros a const char
             int count = 0;
-            while (strcmp(topic, "done") != 0 && count < 3 - 1) {
-                topics[count] = topic;
+
+            while (strcmp(topic, "done") != 0 && count < 3) {
+                topics[count] = strdup(topic); // strdup asigna memoria y copia la cadena
                 count++;
+                if (count >= 3) break; // Evitar desbordamiento del array
                 printf("Enter the next topic (or type 'done' to finish): ");
                 scanf("%s", topic);
             }
-            topics[4] = NULL; // Agrega un NULL al final del array de topics
+            topics[count] = NULL; // Agrega un NULL al final del array de topics
 
             MQTT_Packet packet = create_subscribe_packet(topics);
             send_subscribe_to_server(sockfd, packet);
@@ -123,80 +81,8 @@ void *send_packet(void *arg){
 char serverIP[MAX], clientIP[INET_ADDRSTRLEN];
 FILE *log_file = NULL;
 
-int main(int argc, char *argv[]) {
-    int sockfd, connfd; 
-    struct sockaddr_in servaddr; 
-    int port;
-    char log_path[MAX];
-
-    if (argc == 4) {
-        strcpy(serverIP, argv[1]);
-        port = atoi(argv[2]);
-        strcpy(log_path, argv[3]);
-    } else
-        return 1;
-
-    // Socket creation and verification
-    sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    if (sockfd == -1)
-    {
-        printf("socket creation failed...\n");
-        exit(EXIT_FAILURE);
-    }
-    else
-        printf("Socket successfully created..\n");
-    bzero(&servaddr, sizeof(servaddr));
-
-    // Assign IP, PORT
-    servaddr.sin_family = AF_INET;
-    servaddr.sin_addr.s_addr = inet_addr(serverIP);
-    servaddr.sin_port = htons(port);
-
-    // Connect ent socket to server socket
-    if (connect(sockfd, (SA *)&servaddr, sizeof(servaddr)) != 0)
-    {
-        printf("connection with the server failed...\n");
-        exit(EXIT_FAILURE);
-    }
-    else
-        printf("connected to the server..\n");
-
-    // MQTT_Packet packet = create_connect_packet(1, encodeMessageToUTF8("J01"), encodeMessageToUTF8("Juan123"), encodeMessageToUTF8("12345678"));
-    //print_connect_packet(&packet);
-    // send_connect_to_server(sockfd, packet);
-    //free_packet(&packet);
-
-    // MQTT_Packet packet = create_subscribe_packet(topics);
-    // print_mqtt_packet(packet);
-    // send_subscribe_to_server(sockfd, packet);
-    // printf("ENVIADO");
-
-    char command[] = "curl -s https://api.ipify.org"; 
-    FILE *fp = popen(command, "r");
-    if (fp == NULL) {
-        perror("popen");
-        exit(EXIT_FAILURE);
-    }
-    
-    if (fgets(clientIP, sizeof(clientIP), fp) != NULL) {
-        size_t len = strlen(clientIP);
-        if (len > 0 && clientIP[len - 1] == '\n') {
-            clientIP[len - 1] = '\0';
-        }
-    } else {
-        printf("No se pudo obtener la IP pública.\n");
-    }
-    pclose(fp);
-
-    log_file = fopen(log_path, "a");
-
-    pthread_t tid;
-    printf("\n  ** Thread id **\n");
-    pthread_create(&tid, NULL, send_packet, &sockfd);
-    printf("\n  ** Llama la func **\n");
-
-    pthread_join(tid, NULL);
-
+void *receive_packet(void *arg) {
+    int sockfd = *((int*)arg);
     while (1) {
         printf("receive_packet_from_server\n");
         MQTT_Packet received_packet;
@@ -281,11 +167,55 @@ int main(int argc, char *argv[]) {
 
         free_packet(&received_packet);
     }
+}
 
-    MQTT_Packet packet_p = create_publish_packet(encodeMessageToUTF8("EAFIT/Bloque/18/Salon/301/Temperatura"), encodeMessageToUTF8("29"));
-    send_publish_to_server(sockfd, packet_p);
-    printf("%02X\n", packet_p.payload);
-    free_packet(&packet_p);
+int main(int argc, char *argv[]) {
+    int sockfd, connfd; 
+    struct sockaddr_in servaddr; 
+    char ip[MAX], log_path[MAX];
+    int port;
+
+    if (argc == 4) {
+        strcpy(ip, argv[1]);
+        port = atoi(argv[2]);
+        strcpy(log_path, argv[3]);
+    } else
+        return 1;
+
+    // Socket creation and verification
+    sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    if (sockfd == -1)
+    {
+        printf("socket creation failed...\n");
+        exit(EXIT_FAILURE);
+    }
+    else
+        printf("Socket successfully created..\n");
+    bzero(&servaddr, sizeof(servaddr));
+
+    // Assign IP, PORT
+    servaddr.sin_family = AF_INET;
+    servaddr.sin_addr.s_addr = inet_addr(ip);
+    servaddr.sin_port = htons(port);
+
+    // Connect ent socket to server socket
+    if (connect(sockfd, (SA *)&servaddr, sizeof(servaddr)) != 0)
+    {
+        printf("connection with the server failed...\n");
+        exit(EXIT_FAILURE);
+    }
+    else
+        printf("connected to the server..\n");
+
+    MQTT_Packet packet = create_connect_packet(1, encodeMessageToUTF8("J01"), encodeMessageToUTF8("Juan123"), encodeMessageToUTF8("12345678"));
+    send_connect_to_server(sockfd, packet);
+
+    pthread_t send_tid, receive_tid;
+    pthread_create(&send_tid, NULL, send_packet, &sockfd);
+    pthread_create(&receive_tid, NULL, receive_packet, &sockfd);
+
+    pthread_join(send_tid, NULL);
+    pthread_join(receive_tid, NULL);
 
     // Close the socket
     close(sockfd);
