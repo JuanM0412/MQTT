@@ -82,6 +82,9 @@ void *send_packet(void *arg){
 
             MQTT_Packet packet = create_publish_packet(topic, message);
             send_publish_to_server(sockfd, packet);
+
+            logger_client("Publish packet sent to server", sockfd);
+
             printf("%02X\n", packet.payload);
         } else if (option == 2) {
             printf("\n  ** Subscribe **\n");
@@ -102,8 +105,12 @@ void *send_packet(void *arg){
 
             MQTT_Packet packet = create_subscribe_packet(topics);
             send_subscribe_to_server(sockfd, packet);
+
+            logger_client("Subscribe packet sent to server", sockfd);
+
         } else if (option == 3) {
             printf("\n  ** Disconnect **\n");
+            logger_client("Disconnect packet sent to server", sockfd);
             close(sockfd);
             exit(0);
         } else {
@@ -183,8 +190,6 @@ int main(int argc, char *argv[]) {
 
     log_file = fopen(log_path, "a");
 
-    logger_client("hola", connfd);
-
     pthread_t tid;
     printf("\n  ** Thread id **\n");
     pthread_create(&tid, NULL, send_packet, &sockfd);
@@ -209,6 +214,7 @@ int main(int argc, char *argv[]) {
         received_packet.remaining_length = buffer[offset++];
         
         if (received_packet.fixed_header == MQTT_FIXED_HEADER_PUBLISH) {
+
             printf("MQTT_FIXED_HEADER_PUBLISH\n");
             size_t topic_length = (buffer[offset++] << 8) | buffer[offset++];
             received_packet.variable_header = malloc(4 + topic_length);
@@ -242,6 +248,9 @@ int main(int argc, char *argv[]) {
                 printf("%c ", received_packet.payload[i]);
             }
         } else if (received_packet.fixed_header == MQTT_FIXED_HEADER_CONNACK) {
+
+            logger_client("Connack packet recieved from server", sockfd);
+
             received_packet.variable_header = malloc(2);
             received_packet.variable_header[0] = buffer[offset++];
             received_packet.variable_header[1] = buffer[offset];
@@ -251,6 +260,9 @@ int main(int argc, char *argv[]) {
                 break;
             }
         } else if (received_packet.fixed_header == MQTT_FIXED_HEADER_SUBACK) {
+
+            logger_client("Suback packet recieved from server", sockfd);
+
             received_packet.variable_header = malloc(2);
             payload_length = received_packet.remaining_length - 2;
 
