@@ -1,9 +1,5 @@
 **/bin/*
-config.txt
 **/.vscode/*
-m.c
-s.c
-test.c
 command.txt
 **/tree/*
-debug.c
+log.log
