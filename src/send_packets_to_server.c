@@ -22,6 +22,12 @@ void send_connect_to_server(int sockfd, MQTT_Packet packet) {
 
     // Liberar memoria
     free(buffer);
+
+    printf("Contenido del buffer:\n");
+    for (size_t i = 0; i < total_length; i++) {
+        printf("%02x ", buffer[i]);
+    }
+    printf("\n");
 }
 
 void send_publish_to_server(int sockfd, MQTT_Packet packet) {
@@ -51,6 +57,10 @@ void send_publish_to_server(int sockfd, MQTT_Packet packet) {
 
     memcpy(buffer + offset, &packet.variable_header[topic_length + 2], 2);
     offset += 2;
+
+    for (int i = 0; i < packet.remaining_length - (topic_length + 4); i++) {
+        buffer[offset + i] = packet.payload[i];
+    }
 
     // Send the buffer through the socket
     write(sockfd, buffer, total_size);

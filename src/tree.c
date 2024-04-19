@@ -66,6 +66,14 @@ void freeTreeNode(TreeNode *node) {
 }
 
 //This function print in the console the structure of the tree
+void printHex(const char *str) {
+    while (*str != '\0') {
+        printf("%02X ", (unsigned char)*str);
+        str++;
+    }
+    printf("\n");
+}
+
 void printTree(TreeNode *node, int depth) {
     if (node == NULL) {
         return;
@@ -82,7 +90,8 @@ void printTree(TreeNode *node, int depth) {
             for (int j = 0; j < depth + 1; j++) {
                 printf("  ");
             }
-            printf("* Message: %s\n", node->messages[i]);
+            printf("* Message: ");
+            printHex(node->messages[i]);
         }
     }
 
@@ -91,7 +100,7 @@ void printTree(TreeNode *node, int depth) {
             for (int j = 0; j < depth + 1; j++) {
                 printf("  ");
             }
-            printf("* User: %d\n", node->users[i]);
+            printf("* User: %02X\n", node->users[i]);
         }
     }
 

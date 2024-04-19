@@ -3,8 +3,11 @@
 - [Introduction](https://github.com/JuanM0412/MQTT/tree/master?tab=readme-ov-file#introduction)
 - [Achievements-and-Limitations](https://github.com/JuanM0412/MQTT/tree/master?tab=readme-ov-file#achievements-and-limitations)
 - [Selected socket type](https://github.com/JuanM0412/MQTT/tree/master?tab=readme-ov-file#selected-socket-type-stream-sock_stream-or-datagram-sock_dgram)
+- [Running the project](https://github.com/JuanM0412/MQTT/tree/master?tab=readme-ov-file#running-the-project)
 - [Conclusions](https://github.com/JuanM0412/MQTT/tree/master?tab=readme-ov-file#conclusions)
+- [Changes](https://github.com/JuanM0412/MQTT/tree/master?tab=readme-ov-file#changes)
 - [References](https://github.com/JuanM0412/MQTT/tree/master?tab=readme-ov-file#references)
+- [Contibutors](https://github.com/JuanM0412/MQTT/tree/master?tab=readme-ov-file#contibutors)
 
 ## Introduction
 MQTT (Message Queuing Telemetry Transport) is a lightweight messaging protocol widely used in IoT for its low bandwidth consumption. It is based on the client-server model. IBM developed MQTT in the 1990s, but since then, the open-source community has adopted it, making it an open standard primarily driven by Oasis.
@@ -29,7 +32,8 @@ Widely compatible: Since MQTT is based on TCP/IP, most MQTT broker implementatio
 
 Suitable for applications requiring continuous data transmission, and it also allows bidirectional communication, ideal for MQTT implementation purposes.
 
-![Copia de Diagrama de secuencia básico](https://github.com/JuanM0412/MQTT/assets/99107537/cac4f813-7d5e-474e-81d7-7561cf78220b)
+![Diagrama de secuencias](https://github.com/JuanM0412/MQTT/assets/99107537/cac4f813-7d5e-474e-81d7-7561cf78220b)
+![Diagrama de componentes](img/components.png)
 
 ## Achievements and Limitations
 Among the achieved aspects, it is worth highlighting the ability to handle multiple concurrent connections within the same server. An efficient data structure for storing messages and users associated with each topic was also successfully implemented, along with a streamlined structure for handling packets, including encoding, decoding algorithms, and interactions with the topic tree.
@@ -44,7 +48,50 @@ Finally, another aspect that was not developed was the unsubscribe message type.
 - [X] Publish
 - [X] Disconnect
 - [X] Log Server
-- [ ] Log Client
+- [X] Log Client
+- [ ] UNSUBCRIBE packet
+- [ ] Permanent sessions
+
+## Running the project
+1. Make sure you have C and related tools and libraries installed in your system.
+
+2. At a terminal, run the following command:
+    ```
+    git clone https://github.com/JuanM0412/MQTT.git
+    ```
+
+3. Go to the directory where you cloned the project:
+    ```
+    git clone https://github.com/JuanM0412/MQTT.git
+    ```
+
+4. Create a `bin` directory inside the root of the project:
+    ```
+    mkdir bin
+    ```
+
+5. Compile the server:
+    ```
+    gcc -o bin/server src/server.c src/queue.c src/send_packets_to_client.c src/tree.c src/decode.c src/encode.c src/packet.c src/handle_tree.c src/utils.c -lpthread
+    ```
+
+6. Compile the client:
+    ```
+    gcc -o bin/client src/client.c src/decode.c src/encode.c src/packet.c src/send_packets_to_server.c src/utils.c -lpthread
+    ```
+
+7. Execute the application
+    - In case you want to run the server:
+        ```
+        ./bin/server privateIP 1833 logPath
+        ```
+    - In case you want to run the cleint:
+        ```
+        ./bin/client publicIP 1833 logPath
+        ```
+    **NOTE:** you must change the `publicIP`, `privateIP`, and `logPath`, according to your needs.
+
+
 ## Conclusions
 - Developing the protocol yields a wealth of valuable learnings, not only in terms of soft skills but also technical skills. For instance, it involves crafting a concurrent application for message transmission and reception via sockets and implementing optimal data structures to represent our logical models in code.
 
@@ -52,7 +99,28 @@ Finally, another aspect that was not developed was the unsubscribe message type.
 
 - Implementing a protocol according to formal specifications is challenging but not impossible. Confronting such a technical document can be daunting yet ultimately rewarding.
 
+## Changes
+
+*Changes made after the deadline.*
+
+#### send_packets_to_server.c
+![send_packets_to_server](img/send_packets_to_server.png)
+
+#### server.c
+![server(1)](img/server(1).png)
+![server(2)](img/server(2).png)
+![server(3)](img/server(3).png)
+![server(4)](img/server(4).png)
+
+#### client.c
+![client](img/client.png)
+
 ## References
 - [Playing with UTF-8 in C++](https://mobiarch.wordpress.com/2022/12/03/playing-with-utf-8-in-c/)
 - [UTF-8 strings in C](https://dev.to/rdentato/utf-8-strings-in-c-1-3-42a4)
 - [MQTT](http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.pdf)
+
+## Contributors
+- **[Juan Manuel Gómez](https://github.com/JuanM0412)**
+- **[Miguel Ángel Hoyos](https://github.com/miguelhoyosve)**
+- **[Santiago Neusa](https://github.com/sneusar)**
