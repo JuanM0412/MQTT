@@ -1,3 +1,8 @@
-extern FILE *log_file;
+#include <arpa/inet.h>
+#define MAX 360
 
-void logger(char *message, char *serverIP, char *clientIP);
+extern FILE *log_file;
+extern char serverIP[MAX];
+
+void logger_server(char *message, int socket);
+void logger_client(char *message, int socket);

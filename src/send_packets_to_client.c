@@ -8,7 +8,7 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <arpa/inet.h>
-#include "../include/handle_packets.h"
+#include "../include/send_packets_to_client.h"
 
 void send_publish_to_client(int connfd, MQTT_Packet packet){
     printf("Fixed Header: %u\n", packet.fixed_header);
