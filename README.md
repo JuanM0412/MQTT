@@ -1,13 +1,13 @@
 # MQTT
 ## Table of Contents
-- [Introduction](https://github.com/JuanM0412/MQTT/tree/master?tab=readme-ov-file#introduction)
-- [Achievements-and-Limitations](https://github.com/JuanM0412/MQTT/tree/master?tab=readme-ov-file#achievements-and-limitations)
-- [Selected socket type](https://github.com/JuanM0412/MQTT/tree/master?tab=readme-ov-file#selected-socket-type-stream-sock_stream-or-datagram-sock_dgram)
-- [Running the project](https://github.com/JuanM0412/MQTT/tree/master?tab=readme-ov-file#running-the-project)
-- [Conclusions](https://github.com/JuanM0412/MQTT/tree/master?tab=readme-ov-file#conclusions)
-- [Changes](https://github.com/JuanM0412/MQTT/tree/master?tab=readme-ov-file#changes)
-- [References](https://github.com/JuanM0412/MQTT/tree/master?tab=readme-ov-file#references)
-- [Contibutors](https://github.com/JuanM0412/MQTT/tree/master?tab=readme-ov-file#contibutors)
+- [Introduction](#introduction)
+- [Development and implementation details](#development-and-implementation-details)
+- [Achievements-and-Limitations](#achievements-and-limitations)
+- [Running the project](#running-the-project)
+- [Conclusions](#conclusions)
+- [Changes](#changes)
+- [References](#references)
+- [Contibutors](#contributors)
 
 ## Introduction
 MQTT (Message Queuing Telemetry Transport) is a lightweight messaging protocol widely used in IoT for its low bandwidth consumption. It is based on the client-server model. IBM developed MQTT in the 1990s, but since then, the open-source community has adopted it, making it an open standard primarily driven by Oasis.
